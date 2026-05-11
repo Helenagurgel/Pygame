@@ -82,7 +82,14 @@ class MenuScene(Scene):
     def _confirm_selection(self):
         """Run the action associated with the selected menu option."""
         _, action = self.options[self.selected_index]
-        self.game.change_scene(action)
+        if action in ("single_player", "two_players"):
+            from src.scenes.character_select import CharacterSelectScene
+            if not hasattr(self.game, "config"):
+                self.game.config = {}
+            self.game.config["mode"] = "1P" if action == "single_player" else "2P"
+            self.game.change_scene(CharacterSelectScene(self.game))
+        else:
+            self.game.change_scene(action)
 
     def _select_option_at(self, position):
         """Select the option under the cursor, if there is one."""
