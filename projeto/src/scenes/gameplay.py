@@ -57,74 +57,6 @@ class _PressedKeys:
         return key in self.pressed_keys
 
 
-class GameOverScene(Scene):
-    """Temporary game-over scene used until the final scene exists."""
-
-    def __init__(self, game, score_p1, score_p2):
-        """Create a result screen with the final scores."""
-        super().__init__(game)
-        self.score_p1 = score_p1
-        self.score_p2 = score_p2
-        self.title_font = pygame.font.Font(None, 72)
-        self.text_font = pygame.font.Font(None, 42)
-
-    def handle_events(self, events):
-        """Return to the menu placeholder when ENTER is pressed."""
-        for event in events:
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                self.game.change_scene("menu")
-
-    def update(self, dt):
-        """Keep the result screen state updated."""
-
-    def draw(self, surface):
-        """Draw the final score."""
-        surface.fill(BLACK)
-        title = self.title_font.render("FIM DE JOGO", True, WHITE)
-        score = self.text_font.render(
-            f"{self.score_p1} x {self.score_p2}",
-            True,
-            YELLOW,
-        )
-        surface.blit(title, title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50)))
-        surface.blit(score, score.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20)))
-
-
-class PauseScene(Scene):
-    """Temporary pause scene used until the final pause scene exists."""
-
-    def __init__(self, game, previous_scene):
-        """Create a pause screen that can resume the previous gameplay scene."""
-        super().__init__(game)
-        self.previous_scene = previous_scene
-        self.title_font = pygame.font.Font(None, 72)
-        self.text_font = pygame.font.Font(None, 36)
-
-    def handle_events(self, events):
-        """Resume gameplay with ESC or ENTER."""
-        for event in events:
-            if event.type == pygame.KEYDOWN and event.key in (
-                pygame.K_ESCAPE,
-                pygame.K_RETURN,
-            ):
-                self.game.change_scene(self.previous_scene)
-
-    def update(self, dt):
-        """Keep the pause scene state updated."""
-
-    def draw(self, surface):
-        """Draw the pause overlay."""
-        self.previous_scene.draw(surface)
-        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 150))
-        surface.blit(overlay, (0, 0))
-
-        title = self.title_font.render("PAUSADO", True, WHITE)
-        hint = self.text_font.render("ESC ou ENTER para continuar", True, YELLOW)
-        surface.blit(title, title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 35)))
-        surface.blit(hint, hint.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 35)))
-
-
 class GameplayScene(Scene):
     """Main match scene with players, ball, score, timer, and goals."""
 
@@ -152,6 +84,8 @@ class GameplayScene(Scene):
         self.mode = mode
         self.difficulty = difficulty
         self.stadium = stadium
+        self.character_p1 = character_p1 or {"name": "Jogador 1"}
+        self.character_p2 = character_p2 or {"name": "Jogador 2"}
         self.gravity_mult = self._get_gravity_mult(stadium)
         self.background = self._load_background(stadium)
 
@@ -231,6 +165,7 @@ class GameplayScene(Scene):
         """Handle gameplay events, including ESC to pause."""
         for event in events:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                from src.scenes.pause import PauseScene
                 self.game.change_scene(PauseScene(self.game, self))
 
     def update(self, dt):
@@ -252,7 +187,16 @@ class GameplayScene(Scene):
 
         self.time_left = max(0, self.time_left - dt)
         if self.time_left <= 0:
-            self.game.change_scene(GameOverScene(self.game, self.score_p1, self.score_p2))
+            from src.scenes.game_over import GameOverScene
+            self.game.change_scene(
+                GameOverScene(
+                    self.game,
+                    self.score_p1,
+                    self.score_p2,
+                    self.character_p1,
+                    self.character_p2,
+                )
+            )
             return
 
         if self.state == "kickoff":

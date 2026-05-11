@@ -88,6 +88,9 @@ class MenuScene(Scene):
                 self.game.config = {}
             self.game.config["mode"] = "1P" if action == "single_player" else "2P"
             self.game.change_scene(CharacterSelectScene(self.game))
+        elif action == "instructions":
+            from src.scenes.instructions import InstructionsScene
+            self.game.change_scene(InstructionsScene(self.game))
         else:
             self.game.change_scene(action)
 
