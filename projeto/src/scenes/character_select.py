@@ -21,6 +21,7 @@ CHARACTERS = [
         'jump_mult': 1.0,
         'sprite_path': 'assets/images/players/veloz.png',
         'description': 'Rápido, mas pulo médio',
+        'sprites': {},
     },
     {
         'name': 'Saltador',
@@ -28,6 +29,7 @@ CHARACTERS = [
         'jump_mult': 1.4,
         'sprite_path': 'assets/images/players/saltador.png',
         'description': 'Pulo alto, velocidade média',
+        'sprites': {},
     },
     {
         'name': 'Equilibrado',
@@ -35,6 +37,7 @@ CHARACTERS = [
         'jump_mult': 1.1,
         'sprite_path': 'assets/images/players/equilibrado.png',
         'description': 'Atributos balanceados',
+        'sprites': {},
     },
     {
         'name': 'Tanque',
@@ -42,6 +45,7 @@ CHARACTERS = [
         'jump_mult': 0.9,
         'sprite_path': 'assets/images/players/tanque.png',
         'description': 'Lento, mas poderoso',
+        'sprites': {},
     },
 ]
 
