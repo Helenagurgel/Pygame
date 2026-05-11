@@ -5,6 +5,7 @@ import pygame
 from src.scenes.base_scene import Scene
 from src.scenes.menu import MenuScene
 from src.settings import BLACK, FPS, HEIGHT, TITLE, WHITE, WIDTH
+from src.utils.sound_manager import SoundManager
 
 
 class PlaceholderScene(Scene):
@@ -51,6 +52,7 @@ class Game:
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
         self.running = True
+        self.sounds = SoundManager()
         self.scene = MenuScene(self)
 
     def change_scene(self, new_scene_instance):

@@ -1,20 +1,28 @@
 """Core gameplay scene for Head Soccer DesSoft."""
 
+import math
+import random
+
 import pygame
 
 from src.entities.ball import Ball
 from src.entities.player import Player
+from src.entities.powerup import FireBall, Freeze, GiantPlayer, LowGravity, PowerUpSpawner
 from src.scenes.base_scene import Scene
 from src.settings import (
+    BALL_PUSH_FORCE,
     BALL_RADIUS,
     BLACK,
     BLUE,
+    CELEBRATION_DURATION,
     GOAL_HEIGHT,
     GOAL_WIDTH,
     GRASS_GREEN,
     GRAY,
     GROUND_Y,
     HEIGHT,
+    KICK_RANGE,
+    KICKOFF_DURATION,
     MATCH_DURATION,
     P1_JUMP,
     P1_KICK,
@@ -33,9 +41,8 @@ from src.settings import (
 from src.utils.particle import ParticleSystem
 
 
-CELEBRATION_DURATION = 2.0
-KICKOFF_DURATION = 0.75
-BALL_PUSH_FORCE = 4
+_TRAIL_SPEED_THRESHOLD = 8
+_KICKOFF_ZOOM_PEAK = 1.25
 
 
 class _PressedKeys:
@@ -147,7 +154,6 @@ class GameplayScene(Scene):
         self.stadium = stadium
         self.gravity_mult = self._get_gravity_mult(stadium)
         self.background = self._load_background(stadium)
-        self.goal_sound = None
 
         # feito com IA: controles dos jogadores e CPU reaproveitam Player.handle_input.
         self.p1_controls = {
@@ -184,6 +190,8 @@ class GameplayScene(Scene):
         self.players = pygame.sprite.Group(self.player1, self.player2)
         self.powerups = pygame.sprite.Group()
         self.particles = ParticleSystem()
+        self._powerup_spawner = PowerUpSpawner(self.powerups)
+        self._powerup_effects = []  # [[powerup, target, remaining_ms], ...]
 
         self.score_p1 = 0
         self.score_p2 = 0
@@ -202,6 +210,22 @@ class GameplayScene(Scene):
 
         self.hud_font = pygame.font.Font(None, 64)
         self.timer_font = pygame.font.Font(None, 42)
+        self.goal_font = pygame.font.Font(None, 120)
+        self._scorer = None
+
+        # Pre-create fixed-size surfaces used every frame to avoid per-frame allocation.
+        _glow_r = BALL_RADIUS + 8
+        _glow_sz = _glow_r * 2 + 4
+        self._kick_range_glow = pygame.Surface((_glow_sz, _glow_sz), pygame.SRCALPHA)
+        pygame.draw.circle(
+            self._kick_range_glow, (255, 255, 120, 140),
+            (_glow_r + 2, _glow_r + 2), _glow_r, 3,
+        )
+        self._kick_glow_offset = _glow_r + 2
+        self._kickoff_canvas = pygame.Surface((WIDTH, HEIGHT))
+
+        _music_name = stadium.get("music_name", "gameplay") if isinstance(stadium, dict) else "gameplay"
+        self.game.sounds.play_music(_music_name)
 
     def handle_events(self, events):
         """Handle gameplay events, including ESC to pause."""
@@ -246,28 +270,142 @@ class GameplayScene(Scene):
 
         for player in self.players:
             player.update(dt, GROUND_Y)
+            if player.just_jumped:
+                self.game.sounds.play_sfx("jump")
         self.ball.update(dt, GROUND_Y, WIDTH, self.gravity_mult)
+        if self.ball.just_bounced:
+            self.game.sounds.play_sfx("bounce")
         self.powerups.update(dt)
+        self._powerup_spawner.update(dt)
+        self._update_powerup_effects(dt)
         self.particles.update(dt)
+
+        ball_speed = math.hypot(self.ball.vel_x, self.ball.vel_y)
+        if ball_speed > _TRAIL_SPEED_THRESHOLD:
+            trail_color = (255, 140, 0) if self.ball.on_fire else (200, 200, 230)
+            self.particles.emit_trail(
+                *self.ball.rect.center,
+                self.ball.vel_x, self.ball.vel_y,
+                color=trail_color,
+            )
+
+        if self.ball.on_fire:
+            self.particles.emit_sparkle(
+                self.ball.rect.centerx + random.randint(-8, 8),
+                self.ball.rect.centery + random.randint(-8, 8),
+                count=1,
+            )
 
         # feito com IA: ações de chute têm prioridade sobre empurrões passivos.
         for player in self.players:
             kick_vector = player.try_kick(self.ball)
             if kick_vector is not None:
-                self.ball.kick(*kick_vector)
+                m = self.ball.kick_mult
+                self.ball.kick(kick_vector[0] * m, kick_vector[1] * m)
                 self.particles.emit_sparkle(*self.ball.rect.center, count=3)
+                self.game.sounds.play_sfx("kick")
 
         self._handle_player_ball_collisions()
+        self._handle_powerup_collisions()
         self._check_goals()
 
     def draw(self, surface):
-        """Draw the stadium, invisible gameplay objects, particles, and HUD."""
+        """Draw the full frame: scene, celebration overlays, and HUD.
+
+        During the kickoff state the scene is rendered to a temporary canvas
+        first, then blitted to *surface* with a zoom effect centred on the
+        field. During celebration the 'GOOOL!' text is drawn on top before the
+        HUD so it appears beneath score and timer.
+        """
+        if self.state == "kickoff":
+            self._draw_scene(self._kickoff_canvas)
+            self._blit_with_kickoff_zoom(surface, self._kickoff_canvas)
+        else:
+            self._draw_scene(surface)
+        if self.state == "celebrating":
+            self._draw_goal_text(surface)
+        self.draw_hud(surface)
+
+    def _draw_scene(self, surface):
+        """Draw all in-world elements — background, field, particles, sprites.
+
+        Args:
+            surface: Target pygame.Surface. May be the real display or a
+                temporary canvas when the kickoff zoom is active.
+        """
         surface.blit(self.background, (0, 0))
         self._draw_field(surface)
         self.particles.draw(surface)
         self.all_sprites.draw(surface)
         self.powerups.draw(surface)
-        self.draw_hud(surface)
+        self._draw_powerup_overlays(surface)
+        self._draw_kick_range_indicator(surface)
+
+    def _blit_with_kickoff_zoom(self, surface, canvas):
+        """Scale *canvas* with a triangular zoom and blit it onto *surface*.
+
+        Args:
+            surface: The real display surface to blit the zoomed image onto.
+            canvas: A (WIDTH × HEIGHT) surface with the scene already drawn.
+
+        The zoom peaks at _KICKOFF_ZOOM_PEAK at the midpoint of the kickoff
+        window and returns smoothly to 1.0 at both ends, creating a quick
+        camera-zoom-in-and-out effect centred on the screen.
+        """
+        progress = 1.0 - self.kickoff_timer / KICKOFF_DURATION
+        if progress < 0.5:
+            zoom = 1.0 + (progress * 2.0) * (_KICKOFF_ZOOM_PEAK - 1.0)
+        else:
+            zoom = 1.0 + ((1.0 - progress) * 2.0) * (_KICKOFF_ZOOM_PEAK - 1.0)
+
+        if abs(zoom - 1.0) < 0.005:
+            surface.blit(canvas, (0, 0))
+            return
+
+        new_w = int(WIDTH * zoom)
+        new_h = int(HEIGHT * zoom)
+        scaled = pygame.transform.scale(canvas, (new_w, new_h))
+        surface.blit(scaled, ((WIDTH - new_w) // 2, (HEIGHT - new_h) // 2))
+
+    def _draw_goal_text(self, surface):
+        """Draw a large blinking 'GOOOL!' text centred on the screen.
+
+        Args:
+            surface: Target pygame.Surface, drawn on top of the scene but
+                beneath the HUD so score and timer remain readable.
+
+        The text blinks at approximately 5 Hz by toggling visibility based on
+        ``celebration_timer`` so it is always readable during the 2-second
+        window while still feeling energetic.
+        """
+        if int(self.celebration_timer * 5) % 2 == 0:
+            return
+        text = self.goal_font.render("GOOOL!", True, YELLOW)
+        shadow = self.goal_font.render("GOOOL!", True, BLACK)
+        rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        surface.blit(shadow, rect.move(5, 5))
+        surface.blit(text, rect)
+
+    def _draw_kick_range_indicator(self, surface):
+        """Draw a subtle glow ring around the ball when any player can kick it.
+
+        Args:
+            surface: Target pygame.Surface where the ring is drawn.
+
+        Checks every player's distance to the ball against KICK_RANGE. When
+        at least one player is within range a semi-transparent yellow circle
+        is drawn around the ball so the player knows a kick is available
+        without cluttering the screen at all other times.
+        """
+        for player in self.players:
+            dx = self.ball.rect.centerx - player.rect.centerx
+            dy = self.ball.rect.centery - player.rect.centery
+            if math.hypot(dx, dy) < KICK_RANGE:
+                surface.blit(self._kick_range_glow, (
+                    self.ball.rect.centerx - self._kick_glow_offset,
+                    self.ball.rect.centery - self._kick_glow_offset,
+                ))
+                break
 
     def draw_hud(self, surface):
         """Draw score and remaining time with high-contrast colors.
@@ -296,19 +434,42 @@ class GameplayScene(Scene):
         surface.blit(time_surface, time_rect)
 
     def _update_celebration(self, dt):
-        """Animate particles during the post-goal celebration window."""
+        """Animate the scorer, particles, and the sparkle trickle during the post-goal window.
+
+        Ticks the scorer's celebrate animation once per frame so the winning
+        player keeps playing its special animation while the physics loop is
+        paused. Also emits a small random sparkle near the scorer each frame
+        to keep the celebration visually lively throughout the 2-second window.
+        """
         self.celebration_timer -= dt
         self.particles.update(dt)
 
+        if self._scorer is not None:
+            self._scorer.tick_celebrate()
+            if random.random() < 0.4:
+                self.particles.emit_sparkle(
+                    self._scorer.rect.centerx + random.randint(-20, 20),
+                    self._scorer.rect.top + random.randint(-10, 10),
+                    count=2,
+                )
+
         if self.celebration_timer <= 0:
+            self._scorer = None
             self._reset_positions()
             self.state = "kickoff"
             self.kickoff_timer = KICKOFF_DURATION
 
     def _handle_player_ball_collisions(self):
-        """Push the ball softly when a player touches it without a kick."""
+        """Push the ball softly when a player's mask overlaps the ball's mask.
+
+        Uses pixel-perfect mask collision (pygame.sprite.collide_mask) so the
+        push only triggers when the player sprite visually touches the ball,
+        not just when their bounding boxes overlap. Both sprites must have a
+        ``mask`` attribute; Player.update() and Ball._rotate_from_velocity()
+        rebuild their masks every frame.
+        """
         for player in self.players:
-            if not player.rect.colliderect(self.ball.rect):
+            if not pygame.sprite.collide_mask(player, self.ball):
                 continue
 
             dx = self.ball.rect.centerx - player.rect.centerx
@@ -324,24 +485,42 @@ class GameplayScene(Scene):
         """Detect goals, update score, and start celebration state."""
         if self.left_goal.collidepoint(self.ball.rect.center):
             self.score_p2 += 1
-            self._start_goal_celebration()
+            self._start_goal_celebration(self.player2, self.left_goal)
         elif self.right_goal.collidepoint(self.ball.rect.center):
             self.score_p1 += 1
-            self._start_goal_celebration()
+            self._start_goal_celebration(self.player1, self.right_goal)
 
-    def _start_goal_celebration(self):
-        """Begin the two-second goal celebration after scoring."""
+    def _start_goal_celebration(self, scorer, goal_rect):
+        """Begin the two-second goal celebration after scoring.
+
+        Args:
+            scorer: The Player who scored the goal. Their celebrate animation
+                will play for the duration of the celebration window.
+            goal_rect: The pygame.Rect of the goal mouth where the ball
+                entered, used to emit the particle burst at the right spot.
+
+        Emits a large particle burst inside the goal mouth and a secondary
+        burst at the ball position, stores the scorer for animation ticking,
+        and plays the goal and whistle sound effects.
+        """
+        self._scorer = scorer
         self.state = "celebrating"
         self.celebration_timer = CELEBRATION_DURATION
         self.ball.vel_x = 0
         self.ball.vel_y = 0
-        self.particles.emit_sparkle(*self.ball.rect.center, count=18)
-
-        if self.goal_sound is not None:
-            self.goal_sound.play()
+        for _ in range(4):
+            self.particles.emit_sparkle(
+                goal_rect.centerx + random.randint(-goal_rect.width // 2, goal_rect.width // 2),
+                goal_rect.centery + random.randint(-goal_rect.height // 2, goal_rect.height // 2),
+                count=7,
+            )
+        self.particles.emit_sparkle(*self.ball.rect.center, count=12)
+        self.game.sounds.play_sfx("goal")
+        self.game.sounds.play_sfx("whistle")
 
     def _reset_positions(self):
         """Reset players and ball to kickoff positions after a goal."""
+        self._clear_powerup_effects()
         self.player1.rect.topleft = self.player1_start
         self.player1.vel_x = 0
         self.player1.vel_y = 0
@@ -351,6 +530,71 @@ class GameplayScene(Scene):
         self.player2.vel_y = 0
         self.player2.facing_right = False
         self.ball.reset(*self.ball_start)
+
+    def _update_powerup_effects(self, dt):
+        """Tick all active power-up effect timers and expire finished ones."""
+        for i in reversed(range(len(self._powerup_effects))):
+            effect = self._powerup_effects[i]
+            effect[2] -= dt * 1000
+            if effect[2] <= 0:
+                effect[0].expire(effect[1])
+                self._powerup_effects.pop(i)
+
+    def _handle_powerup_collisions(self):
+        """Collect field power-ups on player or ball contact.
+
+        FireBall is collected by the ball; all other types by a player.
+        Freeze applies to the *opponent* of whichever player touched it.
+        LowGravity targets the scene itself so it can modify gravity_mult.
+        A power-up type that is already active is ignored to prevent stacking.
+        """
+        for powerup in list(self.powerups):
+            cls = type(powerup)
+            if any(isinstance(e[0], cls) for e in self._powerup_effects):
+                continue
+
+            if isinstance(powerup, FireBall):
+                if powerup.rect.colliderect(self.ball.rect):
+                    powerup.kill()
+                    powerup.apply(self.ball)
+                    self._powerup_effects.append([powerup, self.ball, powerup.duration_ms])
+                    self.particles.emit_sparkle(*powerup.rect.center, count=6)
+                    self.game.sounds.play_sfx("powerup")
+            else:
+                for player in self.players:
+                    if not powerup.rect.colliderect(player.rect):
+                        continue
+                    if isinstance(powerup, Freeze):
+                        target = self.player2 if player is self.player1 else self.player1
+                    elif isinstance(powerup, LowGravity):
+                        target = self
+                    else:
+                        target = player
+                    powerup.kill()
+                    powerup.apply(target)
+                    self._powerup_effects.append([powerup, target, powerup.duration_ms])
+                    self.particles.emit_sparkle(*powerup.rect.center, count=6)
+                    self.game.sounds.play_sfx("powerup")
+                    break
+
+    def _clear_powerup_effects(self):
+        """Expire all active effects and reset the spawner (called on goal)."""
+        for effect in self._powerup_effects:
+            effect[0].expire(effect[1])
+        self._powerup_effects.clear()
+        self._powerup_spawner.reset()
+
+    def _draw_powerup_overlays(self, surface):
+        """Draw tinted overlays on frozen players and the flaming ball."""
+        for player in self.players:
+            if player.frozen:
+                overlay = pygame.Surface(player.rect.size, pygame.SRCALPHA)
+                overlay.fill((100, 180, 255, 110))
+                surface.blit(overlay, player.rect)
+        if self.ball.on_fire:
+            overlay = pygame.Surface(self.ball.rect.size, pygame.SRCALPHA)
+            overlay.fill((255, 100, 0, 100))
+            surface.blit(overlay, self.ball.rect)
 
     def _get_cpu_keys(self):
         """Return a simple CPU key state that follows and challenges the ball."""

@@ -43,9 +43,13 @@ BALL_RADIUS = 20
 KICK_RANGE = 70         # distância máxima (px) entre jogador e bola para chutar
 
 # === Partida ===
-MATCH_DURATION = 60     # duração em segundos
+MATCH_DURATION = 60          # duração em segundos
 GOAL_WIDTH = 30
 GOAL_HEIGHT = 200
+CELEBRATION_DURATION = 2.0   # segundos de celebração após um gol
+KICKOFF_DURATION = 0.75      # segundos de contagem regressiva antes do jogo reiniciar
+BALL_PUSH_FORCE = 4          # empurrão suave aplicado à bola no contato sem chute
+BALL_BOUNCE_SOUND_MIN_VEL = 2  # |vel_y| mínima para disparar o som de quique
 
 # === Estados do jogo ===
 class GameState(Enum):

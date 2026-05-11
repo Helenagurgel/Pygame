@@ -3,7 +3,10 @@
     "allow": [
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Rafa\\\\Py.game\\\\Pygame\" -Recurse -Force)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(Sort-Object)"
+      "Bash(Sort-Object)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\rodri\\\\Desktop\\\\Pygame\" -Recurse -Directory)",
+      "Bash(python -c \"import pygame; pygame.init\\(\\); from src.entities.powerup import FireBall, GiantPlayer, Freeze, LowGravity, PowerUpSpawner; print\\('powerup OK'\\); from src.entities.ball import Ball; print\\('ball OK'\\); from src.entities.player import Player; print\\('player OK'\\)\")",
+      "Bash(py -c \"import pygame; pygame.init\\(\\); from src.entities.powerup import FireBall, GiantPlayer, Freeze, LowGravity, PowerUpSpawner; print\\('powerup OK'\\); from src.entities.ball import Ball; print\\('ball OK'\\); from src.entities.player import Player; print\\('player OK'\\)\")"
     ]
   }
 }

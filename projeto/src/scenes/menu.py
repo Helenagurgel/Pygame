@@ -22,6 +22,7 @@ class MenuScene(Scene):
         ]
         self.selected_index = 0
         self.option_rects = []
+        self.game.sounds.play_music("menu")
 
     def handle_events(self, events):
         """Process keyboard and mouse input for the menu."""

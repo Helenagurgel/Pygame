@@ -55,11 +55,15 @@ class Player(pygame.sprite.Sprite):
         self.kick_timer = 0
         self.score = 0
         self.state = "idle"
+        self.frozen = False
+        self.size_mult = 1.0
+        self.just_jumped = False
 
         self.animations = self._create_animations(character_data["sprites"])
         self.current_animation = self.animations[self.state]
         self.image = self._get_oriented_frame()
         self.rect = self.image.get_rect(topleft=(x, y))
+        self.mask = pygame.mask.from_surface(self.image)
 
     def handle_input(self, keys):
         """Read pressed keys and update horizontal movement/action state.
@@ -72,6 +76,12 @@ class Player(pygame.sprite.Sprite):
         controls, starts a jump only while the player is on the ground, and
         starts a fixed-duration kick when the kick key is pressed.
         """
+        self.just_jumped = False
+
+        if self.frozen:
+            self.vel_x = 0
+            return
+
         self.vel_x = 0
 
         if keys[self.controls["left"]]:
@@ -84,6 +94,7 @@ class Player(pygame.sprite.Sprite):
         if keys[self.controls["jump"]] and self.on_ground:
             self.vel_y = JUMP_VELOCITY * self.jump_mult
             self.on_ground = False
+            self.just_jumped = True
 
         if keys[self.controls["kick"]] and not self.is_kicking:
             self.is_kicking = True
@@ -134,6 +145,22 @@ class Player(pygame.sprite.Sprite):
         self._set_animation(self.state)
         self.current_animation.update()
         self.image = self._get_oriented_frame()
+
+        if self.size_mult != 1.0:
+            orig_bottom = self.rect.bottom
+            orig_centerx = self.rect.centerx
+            new_w = int(PLAYER_WIDTH * self.size_mult)
+            new_h = int(PLAYER_HEIGHT * self.size_mult)
+            self.image = pygame.transform.scale(self.image, (new_w, new_h))
+            self.rect = self.image.get_rect()
+            self.rect.bottom = orig_bottom
+            self.rect.centerx = orig_centerx
+            if self.rect.left < 0:
+                self.rect.left = 0
+            elif self.rect.right > WIDTH:
+                self.rect.right = WIDTH
+
+        self.mask = pygame.mask.from_surface(self.image)
 
     def try_kick(self, ball):
         """Return a fixed-force kick vector when the ball is in range.
@@ -210,6 +237,19 @@ class Player(pygame.sprite.Sprite):
             self.state = "run"
         else:
             self.state = "idle"
+
+    def tick_celebrate(self):
+        """Advance the celebration animation by one frame without physics.
+
+        Called once per frame while the scene is in the 'celebrating' state so
+        the winning player plays its celebrate animation even though the normal
+        physics update loop is paused. Sets state, switches the animation track
+        if needed, ticks the frame counter, and rebuilds the oriented image.
+        """
+        self.state = "celebrate"
+        self._set_animation("celebrate")
+        self.current_animation.update()
+        self.image = self._get_oriented_frame()
 
     def _get_ball_center(self, ball):
         """Extract the ball center from common ball object shapes."""

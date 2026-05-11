@@ -2,7 +2,7 @@
 
 import pygame
 
-from src.settings import BALL_BOUNCE, BALL_FRICTION, BALL_RADIUS, GRAVITY
+from src.settings import BALL_BOUNCE, BALL_BOUNCE_SOUND_MIN_VEL, BALL_FRICTION, BALL_RADIUS, GRAVITY
 
 
 KICK_OFFSET = 4
@@ -36,6 +36,9 @@ class Ball(pygame.sprite.Sprite):
         self.vel_x = 0
         self.vel_y = 0
         self.angle = 0
+        self.kick_mult = 1.0
+        self.on_fire = False
+        self.just_bounced = False
 
     def update(self, dt, ground_y, screen_width, gravity_mult=1.0):
         """Update the ball physics and rotated image.
@@ -62,8 +65,10 @@ class Ball(pygame.sprite.Sprite):
         self.rect.x += self.vel_x
         self.rect.y += self.vel_y
 
+        self.just_bounced = False
         if self.rect.bottom > ground_y:
             self.rect.bottom = ground_y
+            self.just_bounced = abs(self.vel_y) > BALL_BOUNCE_SOUND_MIN_VEL
             self.vel_y *= -BALL_BOUNCE
             self.vel_x *= BALL_FRICTION
 
@@ -114,6 +119,9 @@ class Ball(pygame.sprite.Sprite):
         self.vel_x = 0
         self.vel_y = 0
         self.angle = 0
+        self.kick_mult = 1.0
+        self.on_fire = False
+        self.just_bounced = False
         self.image = self.original_image
         self.rect = self.image.get_rect(center=(x, y))
         self.mask = pygame.mask.from_surface(self.image)

@@ -136,6 +136,32 @@ class ParticleSystem:
             )
             self.particles.add(particle)
 
+    def emit_trail(self, x, y, vel_x, vel_y, count=2, color=(200, 200, 230)):
+        """Emit short-lived particles that trail behind a fast-moving ball.
+
+        Args:
+            x: Horizontal center of the emission point (ball center).
+            y: Vertical center of the emission point (ball center).
+            vel_x: Current horizontal ball velocity, used to offset the spawn
+                point opposite to the direction of motion so the trail appears
+                behind the ball rather than inside it.
+            vel_y: Current vertical ball velocity, same purpose as vel_x.
+            count: Number of trail particles to create each call.
+            color: RGB tuple for the trail color. Pass orange (255, 140, 0)
+                when the ball is on fire, grey-white otherwise.
+        """
+        for _ in range(count):
+            particle = Particle(
+                x + random.uniform(-3, 3) - vel_x * 0.3,
+                y + random.uniform(-3, 3) - vel_y * 0.3,
+                vel_x * random.uniform(-0.15, 0.05) + random.uniform(-12, 12),
+                vel_y * random.uniform(-0.15, 0.05) + random.uniform(-12, 12),
+                color,
+                random.randint(2, 5),
+                random.randint(80, 180),
+            )
+            self.particles.add(particle)
+
     def update(self, dt):
         """Update every active particle.
 
