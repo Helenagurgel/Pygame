@@ -28,7 +28,10 @@ class Ball(pygame.sprite.Sprite):
         """
         super().__init__()
         diameter = BALL_RADIUS * 2
-        self._base_image = pygame.transform.scale(image, (diameter, diameter))
+        w, h = image.get_size()
+        side = min(w, h)
+        cropped = image.subsurface(((w - side) // 2, (h - side) // 2, side, side))
+        self._base_image = pygame.transform.scale(cropped, (diameter, diameter))
         self.original_image = self._base_image
         self.image = self.original_image
         self.rect = self.image.get_rect(center=(x, y))
