@@ -39,6 +39,7 @@ from src.settings import (
     WIDTH,
     YELLOW,
 )
+from src.utils.asset_loader import AssetLoader
 from src.utils.particle import ParticleSystem
 
 
@@ -111,11 +112,11 @@ class GameplayScene(Scene):
         )
         self.ball_start = (WIDTH // 2, GROUND_Y - BALL_RADIUS * 4)
 
-        self.player1 = Player(*self.player1_start, self.p1_controls, character_p1)
+        self.player1 = Player(*self.player1_start, self.p1_controls, self._load_character_sprites(character_p1))
         self.player2 = Player(
             *self.player2_start,
             self.p2_controls,
-            character_p2,
+            self._load_character_sprites(character_p2),
             facing_right=False,
         )
         self.ball = Ball(*self.ball_start, self._create_ball_image())
@@ -618,3 +619,15 @@ class GameplayScene(Scene):
         if isinstance(stadium, dict):
             return stadium.get("gravity_mult", 1.0)
         return 1.0
+
+    @staticmethod
+    def _load_character_sprites(character_data):
+        """Return a copy of character_data with sprites populated from sprite_path."""
+        import copy
+        data = copy.copy(character_data)
+        sprite_path = data.get("sprite_path", "")
+        frame = AssetLoader.load_image(
+            f"projeto/{sprite_path}", scale=(PLAYER_WIDTH, PLAYER_HEIGHT)
+        )
+        data["sprites"] = {state: [frame] for state in ("idle", "run", "jump", "kick", "celebrate")}
+        return data
