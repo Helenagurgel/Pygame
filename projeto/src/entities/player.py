@@ -53,6 +53,7 @@ class Player(pygame.sprite.Sprite):
         self.facing_right = facing_right
         self.is_kicking = False
         self.kick_timer = 0
+        self._kick_applied = False
         self.score = 0
         self.state = "idle"
         self.frozen = False
@@ -99,6 +100,7 @@ class Player(pygame.sprite.Sprite):
         if keys[self.controls["kick"]] and not self.is_kicking:
             self.is_kicking = True
             self.kick_timer = KICK_DURATION_FRAMES
+            self._kick_applied = False
 
         self._update_state_from_motion()
 
@@ -175,7 +177,7 @@ class Player(pygame.sprite.Sprite):
             fixed magnitude KICK_FORCE; only its direction changes based on the
             relative position. Returns None when no kick should happen.
         """
-        if not self.is_kicking:
+        if not self.is_kicking or self._kick_applied:
             return None
 
         ball_x, ball_y = self._get_ball_center(ball)
@@ -189,7 +191,17 @@ class Player(pygame.sprite.Sprite):
 
         direction_x = dx / distance
         direction_y = dy / distance
-        return (direction_x * KICK_FORCE, direction_y * KICK_FORCE)
+
+        # Always kick upward: clamp vertical direction to ≤ 0 (never downward)
+        # and add a fixed upward bias so foot-level kicks arc into the air.
+        kick_dy = min(direction_y, 0) - 0.5
+        kick_len = math.hypot(direction_x, kick_dy)
+        norm = kick_len if kick_len > 0 else 1.0
+        force_x = (direction_x / norm) * KICK_FORCE
+        force_y = (kick_dy / norm) * KICK_FORCE
+
+        self._kick_applied = True
+        return (force_x, force_y)
 
     def _create_animations(self, sprites):
         """Build an Animation object for every expected player state."""

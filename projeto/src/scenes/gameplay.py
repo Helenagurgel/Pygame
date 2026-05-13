@@ -6,6 +6,7 @@ import random
 import pygame
 
 from src.entities.ball import Ball
+from src.entities.cpu_ai import CPUController
 from src.entities.player import Player
 from src.entities.powerup import FireBall, Freeze, GiantPlayer, LowGravity, PowerUpSpawner
 from src.scenes.base_scene import Scene
@@ -118,6 +119,11 @@ class GameplayScene(Scene):
             facing_right=False,
         )
         self.ball = Ball(*self.ball_start, self._create_ball_image())
+        self.cpu = (
+            CPUController(self.player2, self.ball, self.difficulty or "medium")
+            if self.mode == "1P"
+            else None
+        )
 
         # feito com IA: grupos separam sprites principais e futuros powerups.
         self.all_sprites = pygame.sprite.Group(self.player1, self.player2, self.ball)
@@ -413,6 +419,8 @@ class GameplayScene(Scene):
         rebuild their masks every frame.
         """
         for player in self.players:
+            if player.is_kicking:
+                continue
             if not pygame.sprite.collide_mask(player, self.ball):
                 continue
 
@@ -422,8 +430,21 @@ class GameplayScene(Scene):
                 dx = 1
 
             length = max(1, (dx * dx + dy * dy) ** 0.5)
-            self.ball.vel_x += (dx / length) * BALL_PUSH_FORCE
-            self.ball.vel_y += (dy / length) * BALL_PUSH_FORCE * 0.5
+            nx = dx / length
+            ny = dy / length
+
+            # Separate ball position so a walking player cannot carry the ball.
+            self.ball.rect.x += int(nx * 4)
+            self.ball.rect.y += int(ny * 4)
+
+            approach = -(nx * self.ball.vel_x + ny * self.ball.vel_y)
+            if approach > 3:
+                self.game.sounds.play_sfx("bounce")
+                self.particles.emit_sparkle(*self.ball.rect.center, count=1)
+
+            self.ball.vel_x += nx * BALL_PUSH_FORCE
+            # Never push the ball downward; let gravity handle it.
+            self.ball.vel_y += min(ny, 0) * BALL_PUSH_FORCE
 
     def _check_goals(self):
         """Detect goals, update score, and start celebration state."""
@@ -541,21 +562,17 @@ class GameplayScene(Scene):
             surface.blit(overlay, self.ball.rect)
 
     def _get_cpu_keys(self):
-        """Return a simple CPU key state that follows and challenges the ball."""
+        """Return CPU key state from the difficulty-aware AI controller."""
+        decision = self.cpu.decide(0)
         pressed = set()
-        center_gap = self.ball.rect.centerx - self.player2.rect.centerx
-
-        if center_gap < -20:
+        if decision["left"]:
             pressed.add(self.p2_controls["left"])
-        elif center_gap > 20:
+        if decision["right"]:
             pressed.add(self.p2_controls["right"])
-
-        if self.ball.rect.centery < self.player2.rect.centery - 70:
+        if decision["jump"]:
             pressed.add(self.p2_controls["jump"])
-
-        if self.player2.rect.colliderect(self.ball.rect.inflate(40, 40)):
+        if decision["kick"]:
             pressed.add(self.p2_controls["kick"])
-
         return _PressedKeys(pressed)
 
     def _load_background(self, stadium):
