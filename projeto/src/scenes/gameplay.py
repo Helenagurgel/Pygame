@@ -607,12 +607,16 @@ class GameplayScene(Scene):
         pygame.draw.line(surface, GRAY, (WIDTH // 2, GROUND_Y), (WIDTH // 2, HEIGHT), 3)
 
     def _create_ball_image(self):
-        """Create a temporary circular ball image until final assets exist."""
+        """Load the ball sprite, falling back to a drawn circle if missing."""
         diameter = BALL_RADIUS * 2
-        image = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        pygame.draw.circle(image, WHITE, (BALL_RADIUS, BALL_RADIUS), BALL_RADIUS)
-        pygame.draw.circle(image, BLACK, (BALL_RADIUS, BALL_RADIUS), BALL_RADIUS, 2)
-        return image
+        try:
+            image = pygame.image.load("assets/images/ball/Bola.png").convert_alpha()
+            return pygame.transform.scale(image, (diameter, diameter))
+        except (pygame.error, FileNotFoundError, OSError):
+            image = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+            pygame.draw.circle(image, WHITE, (BALL_RADIUS, BALL_RADIUS), BALL_RADIUS)
+            pygame.draw.circle(image, BLACK, (BALL_RADIUS, BALL_RADIUS), BALL_RADIUS, 2)
+            return image
 
     def _get_gravity_mult(self, stadium):
         """Read the optional stadium gravity multiplier."""
@@ -627,7 +631,7 @@ class GameplayScene(Scene):
         data = copy.copy(character_data)
         sprite_path = data.get("sprite_path", "")
         frame = AssetLoader.load_image(
-            f"projeto/{sprite_path}", scale=(PLAYER_WIDTH, PLAYER_HEIGHT)
+            sprite_path, scale=(PLAYER_WIDTH, PLAYER_HEIGHT)
         )
         data["sprites"] = {state: [frame] for state in ("idle", "run", "jump", "kick", "celebrate")}
         return data

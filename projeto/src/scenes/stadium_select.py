@@ -15,7 +15,7 @@ from src.utils.asset_loader import AssetLoader
 STADIUMS = [
     {
         'name': 'Estádio Clássico',
-        'background_path': 'assets/images/stadiums/classic.png',
+        'background_path': 'assets/images/stadiums/Estádio.png',
         'music_path': 'assets/sounds/music/classic.ogg',
         'gravity_mult': 1.0,
         'friction_mult': 1.0,
@@ -23,7 +23,7 @@ STADIUMS = [
     },
     {
         'name': 'Lua',
-        'background_path': 'assets/images/stadiums/moon.png',
+        'background_path': 'assets/images/stadiums/Estádio.png',
         'music_path': 'assets/sounds/music/moon.ogg',
         'gravity_mult': 0.4,
         'friction_mult': 1.0,
@@ -31,7 +31,7 @@ STADIUMS = [
     },
     {
         'name': 'Pista Gelada',
-        'background_path': 'assets/images/stadiums/ice.png',
+        'background_path': 'assets/images/stadiums/Estádio.png',
         'music_path': 'assets/sounds/music/ice.ogg',
         'gravity_mult': 1.0,
         'friction_mult': 0.7,
