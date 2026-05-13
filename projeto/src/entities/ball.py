@@ -28,7 +28,8 @@ class Ball(pygame.sprite.Sprite):
         """
         super().__init__()
         diameter = BALL_RADIUS * 2
-        self.original_image = pygame.transform.scale(image, (diameter, diameter))
+        self._base_image = pygame.transform.scale(image, (diameter, diameter))
+        self.original_image = self._base_image
         self.image = self.original_image
         self.rect = self.image.get_rect(center=(x, y))
         self.mask = pygame.mask.from_surface(self.image)
@@ -39,6 +40,7 @@ class Ball(pygame.sprite.Sprite):
         self.kick_mult = 1.0
         self.on_fire = False
         self.just_bounced = False
+        self.size_mult = 1.0
 
     def update(self, dt, ground_y, screen_width, gravity_mult=1.0):
         """Update the ball physics and rotated image.
@@ -105,6 +107,16 @@ class Ball(pygame.sprite.Sprite):
         elif vel_y < 0:
             self.rect.y -= KICK_OFFSET
 
+    def set_size_mult(self, mult: float) -> None:
+        """Resize the ball to *mult* times the default radius, preserving center."""
+        center = self.rect.center
+        self.size_mult = mult
+        new_d = max(4, int(BALL_RADIUS * 2 * mult))
+        self.original_image = pygame.transform.scale(self._base_image, (new_d, new_d))
+        self.image = self.original_image
+        self.rect = self.image.get_rect(center=center)
+        self.mask = pygame.mask.from_surface(self.image)
+
     def reset(self, x, y):
         """Stop the ball and move it back to a centered position.
 
@@ -122,6 +134,8 @@ class Ball(pygame.sprite.Sprite):
         self.kick_mult = 1.0
         self.on_fire = False
         self.just_bounced = False
+        self.size_mult = 1.0
+        self.original_image = self._base_image
         self.image = self.original_image
         self.rect = self.image.get_rect(center=(x, y))
         self.mask = pygame.mask.from_surface(self.image)

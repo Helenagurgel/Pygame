@@ -8,7 +8,7 @@ import pygame
 from src.entities.ball import Ball
 from src.entities.cpu_ai import CPUController
 from src.entities.player import Player
-from src.entities.powerup import FireBall, Freeze, GiantPlayer, LowGravity, PowerUpSpawner
+from src.entities.powerup import BigBall, FireBall, Freeze, GiantPlayer, LowGravity, SmallBall, PowerUpSpawner
 from src.scenes.base_scene import Scene
 from src.settings import (
     BALL_PUSH_FORCE,
@@ -126,6 +126,8 @@ class GameplayScene(Scene):
         )
 
         # feito com IA: grupos separam sprites principais e futuros powerups.
+        self.last_kicker = self.player1
+
         self.all_sprites = pygame.sprite.Group(self.player1, self.player2, self.ball)
         self.players = pygame.sprite.Group(self.player1, self.player2)
         self.powerups = pygame.sprite.Group()
@@ -250,6 +252,7 @@ class GameplayScene(Scene):
         for player in self.players:
             kick_vector = player.try_kick(self.ball)
             if kick_vector is not None:
+                self.last_kicker = player
                 m = self.ball.kick_mult
                 self.ball.kick(kick_vector[0] * m, kick_vector[1] * m)
                 self.particles.emit_sparkle(*self.ball.rect.center, count=3)
@@ -486,6 +489,7 @@ class GameplayScene(Scene):
     def _reset_positions(self):
         """Reset players and ball to kickoff positions after a goal."""
         self._clear_powerup_effects()
+        self.last_kicker = self.player1
         self.player1.rect.topleft = self.player1_start
         self.player1.vel_x = 0
         self.player1.vel_y = 0
@@ -506,48 +510,42 @@ class GameplayScene(Scene):
                 self._powerup_effects.pop(i)
 
     def _handle_powerup_collisions(self):
-        """Collect field power-ups on player or ball contact.
+        """Collect field power-ups on ball contact only.
 
-        FireBall is collected by the ball; all other types by a player.
-        Freeze applies to the *opponent* of whichever player touched it.
-        LowGravity targets the scene itself so it can modify gravity_mult.
-        A power-up type that is already active is ignored to prevent stacking.
+        All power-ups are activated when the ball touches them.
+        GiantPlayer benefits the last player who kicked the ball.
+        Freeze targets the opponent of that last kicker.
+        LowGravity targets the scene to modify gravity_mult.
+        A power-up type already active is ignored to prevent stacking.
         """
         for powerup in list(self.powerups):
             cls = type(powerup)
             if any(isinstance(e[0], cls) for e in self._powerup_effects):
                 continue
 
-            if isinstance(powerup, FireBall):
-                if powerup.rect.colliderect(self.ball.rect):
-                    powerup.kill()
-                    powerup.apply(self.ball)
-                    self._powerup_effects.append([powerup, self.ball, powerup.duration_ms])
-                    self.particles.emit_sparkle(*powerup.rect.center, count=6)
-                    self.game.sounds.play_sfx("powerup")
+            if not powerup.rect.colliderect(self.ball.rect):
+                continue
+
+            if isinstance(powerup, (FireBall, BigBall, SmallBall)):
+                target = self.ball
+            elif isinstance(powerup, Freeze):
+                target = self.player2 if self.last_kicker is self.player1 else self.player1
+            elif isinstance(powerup, LowGravity):
+                target = self
             else:
-                for player in self.players:
-                    if not powerup.rect.colliderect(player.rect):
-                        continue
-                    if isinstance(powerup, Freeze):
-                        target = self.player2 if player is self.player1 else self.player1
-                    elif isinstance(powerup, LowGravity):
-                        target = self
-                    else:
-                        target = player
-                    powerup.kill()
-                    powerup.apply(target)
-                    self._powerup_effects.append([powerup, target, powerup.duration_ms])
-                    self.particles.emit_sparkle(*powerup.rect.center, count=6)
-                    self.game.sounds.play_sfx("powerup")
-                    break
+                target = self.last_kicker
+
+            powerup.kill()
+            powerup.apply(target)
+            self._powerup_effects.append([powerup, target, powerup.duration_ms])
+            self.particles.emit_sparkle(*powerup.rect.center, count=6)
+            self.game.sounds.play_sfx("powerup")
 
     def _clear_powerup_effects(self):
-        """Expire all active effects and reset the spawner (called on goal)."""
+        """Expire all active effects on goal; field power-ups and spawn timer persist."""
         for effect in self._powerup_effects:
             effect[0].expire(effect[1])
         self._powerup_effects.clear()
-        self._powerup_spawner.reset()
 
     def _draw_powerup_overlays(self, surface):
         """Draw tinted overlays on frozen players and the flaming ball."""

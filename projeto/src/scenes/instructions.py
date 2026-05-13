@@ -6,8 +6,9 @@ antes de entrar em campo.
 
 import pygame
 
+from src.entities.powerup import BigBall, FireBall, Freeze, GiantPlayer, LowGravity, SmallBall
 from src.scenes.base_scene import Scene
-from src.settings import BLACK, HEIGHT, SKY_BLUE, WHITE, WIDTH, YELLOW
+from src.settings import BLACK, HEIGHT, SKY_BLUE, WIDTH
 from src.utils.asset_loader import AssetLoader
 
 _KEYS_P1 = [('A', 'esquerda'), ('D', 'direita'), ('W', 'pular'), ('ESPACO', 'chutar')]
@@ -20,11 +21,13 @@ _KEY_POSITIONS_X = [
     WIDTH // 2 + 360,
 ]
 
-_POWERUPS = [
-    ('Bola de Fogo', 'A bola fica em chamas — gol garantido no proximo toque.'),
-    ('Jogador Gigante', 'O jogador cresce e domina uma area maior do campo.'),
-    ('Congelar', 'O adversario fica imobil por alguns segundos.'),
-    ('Baixa Gravidade', 'Gravidade reduzida temporariamente para todos.'),
+_POWERUP_ENTRIES = [
+    (FireBall,     'A bola fica em chamas — chutes ficam 1.5x mais fortes.'),
+    (GiantPlayer,  'O jogador que pegou cresce e domina uma area maior.'),
+    (Freeze,       'O adversario fica imobil por alguns segundos.'),
+    (LowGravity,   'Gravidade reduzida temporariamente para todos.'),
+    (BigBall,      'A bola dobra de tamanho — mais facil de acertar.'),
+    (SmallBall,    'A bola diminui pela metade — muito mais dificil de acertar.'),
 ]
 
 
@@ -47,6 +50,16 @@ class InstructionsScene(Scene):
         self.font_body = AssetLoader.load_font(None, 28)
         self.font_key = AssetLoader.load_font(None, 22)
         self.font_hint = AssetLoader.load_font(None, 26)
+        self._powerup_icons = self._build_powerup_icons()
+
+    @staticmethod
+    def _build_powerup_icons():
+        """Instancia cada classe de power-up para extrair seu icone."""
+        icons = []
+        for cls, desc in _POWERUP_ENTRIES:
+            instance = cls(0, 0)
+            icons.append((instance.icon, desc))
+        return icons
 
     def handle_events(self, events):
         """Retorna ao MenuScene ao pressionar ESC ou ENTER.
@@ -165,20 +178,24 @@ class InstructionsScene(Scene):
     # ------------------------------------------------------------------ #
 
     def _draw_powerups(self, surface):
-        """Desenha a lista de power-ups disponiveis.
+        """Desenha a lista de power-ups com icones no lugar dos nomes.
 
         Args:
             surface: Superficie de destino.
         """
         header = self.font_section.render("Power-ups", True, BLACK)
-        surface.blit(header, header.get_rect(center=(WIDTH // 2, 440)))
+        surface.blit(header, header.get_rect(center=(WIDTH // 2, 435)))
 
-        for i, (name, desc) in enumerate(_POWERUPS):
-            y = 478 + i * 32
-            name_surf = self.font_body.render(f"{name}:", True, YELLOW)
-            desc_surf = self.font_body.render(f"  {desc}", True, BLACK)
-            total_w = name_surf.get_width() + desc_surf.get_width()
+        icon_size = 30
+        row_spacing = 36
+        start_y = 468
+        gap = 8
+
+        for i, (icon_surf, desc) in enumerate(self._powerup_icons):
+            y = start_y + i * row_spacing
+            icon = pygame.transform.smoothscale(icon_surf, (icon_size, icon_size))
+            desc_surf = self.font_body.render(f" {desc}", True, BLACK)
+            total_w = icon_size + gap + desc_surf.get_width()
             start_x = WIDTH // 2 - total_w // 2
-            baseline = y - name_surf.get_height() // 2
-            surface.blit(name_surf, (start_x, baseline))
-            surface.blit(desc_surf, (start_x + name_surf.get_width(), baseline))
+            surface.blit(icon, (start_x, y - icon_size // 2))
+            surface.blit(desc_surf, (start_x + icon_size + gap, y - desc_surf.get_height() // 2))

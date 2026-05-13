@@ -9,8 +9,7 @@ import pygame
 from src.settings import GROUND_Y, WIDTH
 
 
-_SPAWN_INTERVAL_MIN_MS = 10_000
-_SPAWN_INTERVAL_MAX_MS = 15_000
+_SPAWN_INTERVAL_MS = 10_000
 _FLOAT_AMPLITUDE = 8    # pixels of vertical oscillation
 _FLOAT_SPEED = 2.0      # radians per second
 _ICON_RADIUS = 22
@@ -104,7 +103,7 @@ class GiantPlayer(PowerUp):
     and the rect resizes back to normal on the next physics frame.
     """
 
-    duration_ms = 6_000
+    duration_ms = 5_000
     name = "GiantPlayer"
 
     def _create_icon(self) -> pygame.Surface:
@@ -135,7 +134,7 @@ class Freeze(PowerUp):
     fall under gravity; only voluntary input is blocked.
     """
 
-    duration_ms = 2_000
+    duration_ms = 5_000
     name = "Freeze"
 
     def _create_icon(self) -> pygame.Surface:
@@ -169,7 +168,7 @@ class LowGravity(PowerUp):
     when the stadium already has a custom gravity modifier.
     """
 
-    duration_ms = 4_000
+    duration_ms = 5_000
     name = "LowGravity"
 
     def __init__(self, x: int, y: int) -> None:
@@ -199,11 +198,84 @@ class LowGravity(PowerUp):
         target.gravity_mult = self._original_gravity
 
 
+class BigBall(PowerUp):
+    """Doubles the ball's radius for 6 s — harder to dodge, easier to hit.
+
+    Calls ``ball.set_size_mult(2.0)`` on apply and restores it to ``1.0`` on
+    expiry so the ball returns to its original dimensions.
+    """
+
+    duration_ms = 6_000
+    name = "BigBall"
+
+    def _create_icon(self) -> pygame.Surface:
+        surf = pygame.Surface((_ICON_RADIUS * 2, _ICON_RADIUS * 2), pygame.SRCALPHA)
+        pygame.draw.circle(surf, (230, 100, 20), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
+        pygame.draw.circle(surf, (255, 255, 255), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS - 6)
+        pygame.draw.circle(surf, (40, 40, 40), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS - 6, 2)
+        cx, cy = _ICON_RADIUS, _ICON_RADIUS
+        for angle, dx, dy in [(90, 0, -1), (270, 0, 1), (0, 1, 0), (180, -1, 0)]:
+            tip_x = cx + dx * (_ICON_RADIUS - 1)
+            tip_y = cy + dy * (_ICON_RADIUS - 1)
+            pygame.draw.polygon(surf, (230, 100, 20), [
+                (tip_x, tip_y),
+                (tip_x - dy * 4 - dx * 5, tip_y - dx * 4 - dy * 5),
+                (tip_x + dy * 4 - dx * 5, tip_y + dx * 4 - dy * 5),
+            ])
+        return surf
+
+    def apply(self, target) -> None:
+        """Double the ball's size."""
+        target.set_size_mult(2.0)
+
+    def expire(self, target) -> None:
+        """Restore the ball to its normal size."""
+        target.set_size_mult(1.0)
+
+
+class SmallBall(PowerUp):
+    """Halves the ball's radius for 6 s — harder to hit, easier to dodge.
+
+    Calls ``ball.set_size_mult(0.5)`` on apply and restores it to ``1.0`` on
+    expiry so the ball returns to its original dimensions.
+    """
+
+    duration_ms = 6_000
+    name = "SmallBall"
+
+    def _create_icon(self) -> pygame.Surface:
+        surf = pygame.Surface((_ICON_RADIUS * 2, _ICON_RADIUS * 2), pygame.SRCALPHA)
+        pygame.draw.circle(surf, (20, 180, 200), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
+        pygame.draw.circle(surf, (255, 255, 255), (_ICON_RADIUS, _ICON_RADIUS), (_ICON_RADIUS - 6) // 2)
+        pygame.draw.circle(surf, (40, 40, 40), (_ICON_RADIUS, _ICON_RADIUS), (_ICON_RADIUS - 6) // 2, 2)
+        cx, cy = _ICON_RADIUS, _ICON_RADIUS
+        for dx, dy in [(0, -1), (0, 1), (1, 0), (-1, 0)]:
+            outer_x = cx + dx * (_ICON_RADIUS - 2)
+            outer_y = cy + dy * (_ICON_RADIUS - 2)
+            inner_x = cx + dx * ((_ICON_RADIUS - 6) // 2 + 4)
+            inner_y = cy + dy * ((_ICON_RADIUS - 6) // 2 + 4)
+            pygame.draw.line(surf, (20, 180, 200), (outer_x, outer_y), (inner_x, inner_y), 3)
+            pygame.draw.polygon(surf, (20, 180, 200), [
+                (inner_x, inner_y),
+                (inner_x - dy * 3 + dx * 4, inner_y - dx * 3 + dy * 4),
+                (inner_x + dy * 3 + dx * 4, inner_y + dx * 3 + dy * 4),
+            ])
+        return surf
+
+    def apply(self, target) -> None:
+        """Halve the ball's size."""
+        target.set_size_mult(0.5)
+
+    def expire(self, target) -> None:
+        """Restore the ball to its normal size."""
+        target.set_size_mult(1.0)
+
+
 # ---------------------------------------------------------------------------
 # Spawner
 # ---------------------------------------------------------------------------
 
-_POWERUP_CLASSES = [FireBall, GiantPlayer, Freeze, LowGravity]
+_POWERUP_CLASSES = [FireBall, GiantPlayer, Freeze, LowGravity, BigBall, SmallBall]
 
 
 class PowerUpSpawner:
@@ -240,4 +312,4 @@ class PowerUpSpawner:
 
     @staticmethod
     def _next_interval() -> float:
-        return random.randint(_SPAWN_INTERVAL_MIN_MS, _SPAWN_INTERVAL_MAX_MS)
+        return _SPAWN_INTERVAL_MS

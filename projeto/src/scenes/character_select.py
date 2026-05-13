@@ -11,30 +11,33 @@ import random
 import pygame
 
 from src.scenes.base_scene import Scene
-from src.settings import BLACK, HEIGHT, SKY_BLUE, WIDTH
+from src.settings import BLACK, GRAY, HEIGHT, SKY_BLUE, WIDTH
 from src.utils.asset_loader import AssetLoader
 
 CHARACTERS = [
     {
         'name': 'Veloz',
-        'speed_mult': 1.3,
+        'speed_mult': 1.4,
         'jump_mult': 1.0,
+        'force_mult': 0.9,
         'sprite_path': 'assets/images/players/veloz.png',
-        'description': 'Rápido, mas pulo médio',
+        'description': 'Sprint acelerado, chute fraco',
         'sprites': {},
     },
     {
         'name': 'Saltador',
         'speed_mult': 1.0,
-        'jump_mult': 1.4,
+        'jump_mult': 1.3,
+        'force_mult': 1.0,
         'sprite_path': 'assets/images/players/saltador.png',
-        'description': 'Pulo alto, velocidade média',
+        'description': 'Pulo elevado, velocidade padrão',
         'sprites': {},
     },
     {
         'name': 'Equilibrado',
         'speed_mult': 1.1,
         'jump_mult': 1.1,
+        'force_mult': 1.1,
         'sprite_path': 'assets/images/players/equilibrado.png',
         'description': 'Atributos balanceados',
         'sprites': {},
@@ -43,12 +46,14 @@ CHARACTERS = [
         'name': 'Tanque',
         'speed_mult': 0.9,
         'jump_mult': 0.9,
+        'force_mult': 1.5,
         'sprite_path': 'assets/images/players/tanque.png',
-        'description': 'Lento, mas poderoso',
+        'description': 'Lento mas chute potente',
         'sprites': {},
     },
 ]
 
+_REVEAL_DURATION = 2.2          # segundos exibindo o personagem sorteado da CPU
 _PREVIEW_W, _PREVIEW_H = 140, 160
 _NEIGHBOR_W, _NEIGHBOR_H = 90, 105
 _CENTER_X = WIDTH // 2
@@ -91,6 +96,9 @@ class CharacterSelectScene(Scene):
         self.font_hint = AssetLoader.load_font(None, 26)
 
         self._pulse_time = 0.0
+        self._state = 'select'   # 'select' | 'cpu_reveal'
+        self._cpu_char = None
+        self._reveal_timer = 0.0
 
     @property
     def _active_index(self):
@@ -110,6 +118,8 @@ class CharacterSelectScene(Scene):
         Args:
             events: Lista de pygame.Event do frame atual.
         """
+        if self._state == 'cpu_reveal':
+            return
         for event in events:
             if event.type != pygame.KEYDOWN:
                 continue
@@ -133,10 +143,15 @@ class CharacterSelectScene(Scene):
         else:
             self.game.config['character_p1'] = CHARACTERS[self.selected_p1]
             if self.mode == '1P':
-                self.game.config['character_p2'] = random.choice(CHARACTERS)
+                available = [c for i, c in enumerate(CHARACTERS) if i != self.selected_p1]
+                cpu_char = random.choice(available)
+                self.game.config['character_p2'] = cpu_char
+                self._cpu_char = cpu_char
+                self._state = 'cpu_reveal'
+                self._reveal_timer = 0.0
             else:
                 self.game.config['character_p2'] = CHARACTERS[self.selected_p2]
-            self._go_to_stadium()
+                self._go_to_stadium()
 
     def _go_to_stadium(self):
         """Transiciona para StadiumSelectScene (ou placeholder se não existir)."""
@@ -153,6 +168,36 @@ class CharacterSelectScene(Scene):
             dt: Tempo em segundos desde o último frame.
         """
         self._pulse_time += dt
+        if self._state == 'cpu_reveal':
+            self._reveal_timer += dt
+            if self._reveal_timer >= _REVEAL_DURATION:
+                self._go_to_stadium()
+
+    def _draw_cpu_reveal(self, surface):
+        """Exibe o personagem sorteado para a CPU por _REVEAL_DURATION segundos."""
+        surface.fill(SKY_BLUE)
+
+        title = self.font_title.render("A CPU vai usar...", True, BLACK)
+        surface.blit(title, title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 160)))
+
+        char = self._cpu_char
+        char_idx = CHARACTERS.index(char)
+        pulse = 1.0 + 0.07 * math.sin(self._reveal_timer * 5.0)
+        w = int(_PREVIEW_W * 1.4 * pulse)
+        h = int(_PREVIEW_H * 1.4 * pulse)
+        self._blit_preview(surface, char_idx, center=(WIDTH // 2, HEIGHT // 2 - 10), w=w, h=h)
+
+        name_surf = self.font_name.render(char['name'], True, BLACK)
+        surface.blit(name_surf, name_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 120)))
+
+        desc_surf = self.font_desc.render(char['description'], True, BLACK)
+        surface.blit(desc_surf, desc_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 158)))
+
+        progress = min(self._reveal_timer / _REVEAL_DURATION, 1.0)
+        bar_w = int(WIDTH * 0.4 * progress)
+        bar_x = WIDTH // 2 - int(WIDTH * 0.2)
+        pygame.draw.rect(surface, GRAY, (bar_x, HEIGHT - 50, int(WIDTH * 0.4), 10), border_radius=5)
+        pygame.draw.rect(surface, BLACK, (bar_x, HEIGHT - 50, bar_w, 10), border_radius=5)
 
     def draw(self, surface):
         """Desenha o carrossel, nome, descrição e instruções de navegação.
@@ -160,6 +205,10 @@ class CharacterSelectScene(Scene):
         Args:
             surface: pygame.Surface onde a cena será renderizada.
         """
+        if self._state == 'cpu_reveal':
+            self._draw_cpu_reveal(surface)
+            return
+
         surface.fill(SKY_BLUE)
 
         title_text = f"Escolha seu personagem (P{self.current_player})"
@@ -190,12 +239,39 @@ class CharacterSelectScene(Scene):
         surface.blit(name_surf, name_surf.get_rect(center=(WIDTH // 2, _CAROUSEL_Y + 110)))
 
         desc_surf = self.font_desc.render(CHARACTERS[idx]['description'], True, BLACK)
-        surface.blit(desc_surf, desc_surf.get_rect(center=(WIDTH // 2, _CAROUSEL_Y + 150)))
+        surface.blit(desc_surf, desc_surf.get_rect(center=(WIDTH // 2, _CAROUSEL_Y + 148)))
+
+        char = CHARACTERS[idx]
+        self._draw_stat_bar(surface, "Velocidade", char['speed_mult'], _CAROUSEL_Y + 178,
+                            color=(220, 120, 40))
+        self._draw_stat_bar(surface, "Pulo", char['jump_mult'], _CAROUSEL_Y + 206,
+                            color=(60, 120, 220))
+        self._draw_stat_bar(surface, "Força", char['force_mult'], _CAROUSEL_Y + 234,
+                            color=(180, 60, 60))
 
         hint_surf = self.font_hint.render(
             "← → Navegar   ENTER Confirmar   ESC Voltar", True, BLACK
         )
         surface.blit(hint_surf, hint_surf.get_rect(center=(WIDTH // 2, HEIGHT - 36)))
+
+    def _draw_stat_bar(self, surface, label, value, y, color=(80, 180, 80)):
+        """Draw a labeled stat bar showing the multiplier value numerically."""
+        max_val = 1.5
+        bar_w = 180
+        bar_h = 14
+        fill_w = int(bar_w * min(value / max_val, 1.0))
+        bar_x = WIDTH // 2 - bar_w // 2
+
+        lbl = self.font_desc.render(label, True, BLACK)
+        surface.blit(lbl, lbl.get_rect(right=bar_x - 8, centery=y + bar_h // 2))
+
+        pygame.draw.rect(surface, (180, 180, 180), (bar_x, y, bar_w, bar_h), border_radius=4)
+        if fill_w > 0:
+            pygame.draw.rect(surface, color, (bar_x, y, fill_w, bar_h), border_radius=4)
+        pygame.draw.rect(surface, BLACK, (bar_x, y, bar_w, bar_h), 2, border_radius=4)
+
+        val_text = self.font_hint.render(f"{value:.2f}×", True, BLACK)
+        surface.blit(val_text, val_text.get_rect(left=bar_x + bar_w + 8, centery=y + bar_h // 2))
 
     def _blit_preview(self, surface, char_index, center, w, h):
         """Blit o preview de um personagem numa posição e tamanho dados.
