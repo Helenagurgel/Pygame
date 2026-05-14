@@ -4,12 +4,15 @@ Expected file layout inside assets/sounds/:
 
   sfx/
     kick.wav      — ball-kick impact sound
-    goal.wav      — goal-scored celebration jingle
-    whistle.wav   — referee whistle that plays together with goal
+    whistle.wav   — referee whistle that plays on goal
     jump.wav      — player leaves the ground
     bounce.wav    — ball bounces on the ground (significant impact only)
     powerup.wav   — any power-up is collected
     crowd.wav     — crowd cheer (trigger manually via play_sfx("crowd"))
+    goal_veloz.mp3      — celebration sound for Veloz
+    goal_pulador.mp3    — celebration sound for Saltador
+    gol_equilibrado.mp3 — celebration sound for Equilibrado
+    gol_tanque.mp3      — celebration sound for Tanque
 
   music/
     menu.wav          — main-menu background music loop
@@ -36,7 +39,6 @@ _MUSIC_DIR = os.path.join("assets", "sounds", "music")
 
 _SFX_FILES: dict[str, str] = {
     "kick":    "kick.wav",
-    "goal":    "goal.wav",
     "whistle": "whistle.wav",
     "jump":    "jump.wav",
     "bounce":  "bounce.wav",
@@ -161,15 +163,12 @@ class SoundManager:
                 try:
                     pygame.mixer.music.stop()
                     pygame.mixer.music.load(path)
-                    pygame.mixer.music.set_volume(self._music_volume)
-                    pygame.mixer.music.play(0)
+                    pygame.mixer.music.set_volume(min(self._music_volume * 1.7, 1.0))
+                    pygame.mixer.music.play(-1)
                     self._current_music = "__celebration__"
                     return
                 except pygame.error as exc:
                     print(f"[SoundManager] falha ao tocar celebração '{character_name}': {exc}")
-
-        # Fallback: sfx genérico
-        self.play_sfx("goal")
 
     def register_stadium_music(self, name: str, path: str) -> None:
         """Register an additional music file under a given track name.
