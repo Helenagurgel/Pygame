@@ -150,21 +150,23 @@ class Player(pygame.sprite.Sprite):
         self._update_state_from_motion()
         self._set_animation(self.state)
         self.current_animation.update()
+
+        orig_bottom = self.rect.bottom
+        orig_centerx = self.rect.centerx
         self.image = self._get_oriented_frame()
 
         if self.size_mult != 1.0:
-            orig_bottom = self.rect.bottom
-            orig_centerx = self.rect.centerx
             new_w = int(PLAYER_WIDTH * self.size_mult)
             new_h = int(PLAYER_HEIGHT * self.size_mult)
             self.image = pygame.transform.scale(self.image, (new_w, new_h))
-            self.rect = self.image.get_rect()
-            self.rect.bottom = orig_bottom
-            self.rect.centerx = orig_centerx
-            if self.rect.left < 0:
-                self.rect.left = 0
-            elif self.rect.right > WIDTH:
-                self.rect.right = WIDTH
+
+        self.rect = self.image.get_rect()
+        self.rect.bottom = orig_bottom
+        self.rect.centerx = orig_centerx
+        if self.rect.left < 0:
+            self.rect.left = 0
+        elif self.rect.right > WIDTH:
+            self.rect.right = WIDTH
 
         self.mask = pygame.mask.from_surface(self.image)
 
