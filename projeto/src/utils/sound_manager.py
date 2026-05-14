@@ -15,7 +15,7 @@ Expected file layout inside assets/sounds/:
     gol_tanque.mp3      — celebration sound for Tanque
 
   music/
-    menu.wav          — main-menu background music loop
+    Menu.mp3          — main-menu background music loop
     gameplay.wav      — default in-match music loop
     stadium_<name>.wav — optional per-stadium track; <name> must match the
                          'music_name' value in the stadium data dict passed to
@@ -47,7 +47,7 @@ _SFX_FILES: dict[str, str] = {
 }
 
 _MUSIC_FILES: dict[str, str] = {
-    "menu":     "menu.wav",
+    "menu":     "Menu.mp3",
     "gameplay": "gameplay.wav",
 }
 
