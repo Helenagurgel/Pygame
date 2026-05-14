@@ -16,7 +16,7 @@ Expected file layout inside assets/sounds/:
 
   music/
     Menu.mp3          — main-menu background music loop
-    gameplay.wav      — default in-match music loop
+    Gameplay.mp3      — default in-match music loop
     stadium_<name>.wav — optional per-stadium track; <name> must match the
                          'music_name' value in the stadium data dict passed to
                          GameplayScene (e.g. music_name='beach' → stadium_beach.wav)
@@ -48,15 +48,15 @@ _SFX_FILES: dict[str, str] = {
 
 _MUSIC_FILES: dict[str, str] = {
     "menu":     "Menu.mp3",
-    "gameplay": "gameplay.wav",
+    "gameplay": "Gameplay.mp3",
 }
 
-# Chave: name.lower() do personagem (conforme definido em character_select.py)
-_GOAL_CELEBRATION_FILES: dict[str, str] = {
-    "veloz":       "goal_veloz.mp3",
-    "saltador":    "goal_pulador.mp3",
-    "equilibrado": "gol_equilibrado.mp3",
-    "tanque":      "gol_tanque.mp3",
+# Chave: name.lower() do personagem → (arquivo, início_em_segundos)
+_GOAL_CELEBRATION_FILES: dict[str, tuple[str, float]] = {
+    "veloz":       ("goal_veloz.mp3",      0.0),
+    "saltador":    ("goal_pulador.mp3",    7.0),
+    "equilibrado": ("gol_equilibrado.mp3", 0.0),
+    "tanque":      ("gol_tanque.mp3",      0.0),
 }
 
 
@@ -156,15 +156,16 @@ class SoundManager:
             character_name: Valor de ``character['name']`` (ex.: 'Veloz').
                 Se não existir mapeamento ou arquivo, cai no sfx genérico 'goal'.
         """
-        filename = _GOAL_CELEBRATION_FILES.get(character_name.lower())
-        if filename:
+        entry = _GOAL_CELEBRATION_FILES.get(character_name.lower())
+        if entry:
+            filename, start_pos = entry
             path = os.path.join(_SFX_DIR, filename)
             if os.path.isfile(path):
                 try:
                     pygame.mixer.music.stop()
                     pygame.mixer.music.load(path)
                     pygame.mixer.music.set_volume(min(self._music_volume * 1.7, 1.0))
-                    pygame.mixer.music.play(-1)
+                    pygame.mixer.music.play(-1, start=start_pos)
                     self._current_music = "__celebration__"
                     return
                 except pygame.error as exc:
