@@ -12,11 +12,11 @@ Expected file layout inside assets/sounds/:
     crowd.wav     — crowd cheer (trigger manually via play_sfx("crowd"))
 
   music/
-    menu.ogg          — main-menu background music loop
-    gameplay.ogg      — default in-match music loop
-    stadium_<name>.ogg — optional per-stadium track; <name> must match the
+    menu.wav          — main-menu background music loop
+    gameplay.wav      — default in-match music loop
+    stadium_<name>.wav — optional per-stadium track; <name> must match the
                          'music_name' value in the stadium data dict passed to
-                         GameplayScene (e.g. music_name='beach' → stadium_beach.ogg)
+                         GameplayScene (e.g. music_name='beach' → stadium_beach.wav)
 
 All SFX are loaded once at start-up through AssetLoader.load_sound(), which
 silently returns a no-op object when a file is missing. Background music uses
@@ -45,8 +45,8 @@ _SFX_FILES: dict[str, str] = {
 }
 
 _MUSIC_FILES: dict[str, str] = {
-    "menu":     "menu.ogg",
-    "gameplay": "gameplay.ogg",
+    "menu":     "menu.wav",
+    "gameplay": "gameplay.wav",
 }
 
 
