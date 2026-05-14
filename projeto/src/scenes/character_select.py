@@ -77,6 +77,7 @@ class CharacterSelectScene(Scene):
                 o atributo ``config`` do tipo dict com a chave ``'mode'``.
         """
         super().__init__(game)
+        self._bg = AssetLoader.load_image("assets/images/ui/Fundo Padrão.png", scale=(WIDTH, HEIGHT))
         if not hasattr(game, 'config'):
             game.config = {}
 
@@ -175,7 +176,7 @@ class CharacterSelectScene(Scene):
 
     def _draw_cpu_reveal(self, surface):
         """Exibe o personagem sorteado para a CPU por _REVEAL_DURATION segundos."""
-        surface.fill(SKY_BLUE)
+        surface.blit(self._bg, (0, 0))
 
         title = self.font_title.render("A CPU vai usar...", True, BLACK)
         surface.blit(title, title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 160)))
@@ -209,7 +210,7 @@ class CharacterSelectScene(Scene):
             self._draw_cpu_reveal(surface)
             return
 
-        surface.fill(SKY_BLUE)
+        surface.blit(self._bg, (0, 0))
 
         title_text = f"Escolha seu personagem (P{self.current_player})"
         title_surf = self.font_title.render(title_text, True, BLACK)

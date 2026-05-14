@@ -59,6 +59,7 @@ class StadiumSelectScene(Scene):
                 ``'character_p2'`` preenchidas pela tela anterior.
         """
         super().__init__(game)
+        self._bg = AssetLoader.load_image("assets/images/ui/Fundo Padrão.png", scale=(WIDTH, HEIGHT))
         if not hasattr(game, 'config'):
             game.config = {}
 
@@ -172,15 +173,4 @@ class StadiumSelectScene(Scene):
         surface.blit(hint_surf, hint_surf.get_rect(center=(WIDTH // 2, HEIGHT - 36)))
 
     def _draw_background(self, surface):
-        """Desenha um gradiente vertical escuro como fundo.
-
-        Args:
-            surface: Superfície de destino.
-        """
-        dark = (10, 10, 40)
-        for y in range(HEIGHT):
-            ratio = y / HEIGHT
-            r = int(BLUE[0] * (1 - ratio) + dark[0] * ratio)
-            g = int(BLUE[1] * (1 - ratio) + dark[1] * ratio)
-            b = int(BLUE[2] * (1 - ratio) + dark[2] * ratio)
-            pygame.draw.line(surface, (r, g, b), (0, y), (WIDTH, y))
+        surface.blit(self._bg, (0, 0))

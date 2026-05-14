@@ -3,25 +3,35 @@
 import pygame
 
 from src.scenes.base_scene import Scene
-from src.settings import BLACK, BLUE, HEIGHT, RED, WHITE, WIDTH
+from src.settings import HEIGHT, WHITE, WIDTH
+
+_BG_PATH = "assets/images/ui/Capa.png"
+
+# Posições dos botões na imagem escalada para 1280×720.
+# A imagem tem proporção 16:9 igual ao jogo, então o scale é uniforme.
+_BTN_CX = WIDTH // 2   # centro horizontal
+_BTN_W = 413           # largura do botão
+_BTN_H = 54            # altura do botão
+_FIRST_Y = 329         # centro Y do primeiro botão
+_SPACING = 62          # espaçamento entre centros
 
 
 class MenuScene(Scene):
     """Interactive main menu with keyboard and mouse navigation."""
 
     def __init__(self, game):
-        """Create menu fonts, options, and initial selection state."""
+        """Create menu state and load the background image."""
         super().__init__(game)
-        self.title_font = pygame.font.Font(None, 84)
-        self.option_font = pygame.font.Font(None, 48)
+        self.arrow_font = pygame.font.Font(None, 52)
         self.options = [
-            ("1 Jogador", "single_player"),
+            ("1 Jogador",   "single_player"),
             ("2 Jogadores", "two_players"),
-            ("Instruções", "instructions"),
-            ("Sair", "exit"),
+            ("Instruções",  "instructions"),
+            ("Sair",        "exit"),
         ]
         self.selected_index = 0
-        self.option_rects = []
+        self.option_rects = self._build_rects()
+        self._bg = self._load_background()
         self.game.sounds.play_music("menu")
 
     def handle_events(self, events):
@@ -43,41 +53,16 @@ class MenuScene(Scene):
                     self._confirm_selection()
 
     def update(self, dt):
-        """Keep the menu state updated.
-
-        The current menu has no animations yet, but the method is kept to
-        satisfy the common scene interface.
-        """
+        pass
 
     def draw(self, surface):
-        """Draw the menu background, title, and selectable options."""
-        self._draw_background(surface)
+        """Draw the background image and highlight the selected button."""
+        surface.blit(self._bg, (0, 0))
 
-        title = self.title_font.render("HEAD SOCCER DESSOFT", True, WHITE)
-        title_rect = title.get_rect(center=(WIDTH // 2, HEIGHT // 4))
-        surface.blit(title, title_rect)
-
-        self.option_rects = []
-        first_option_y = HEIGHT // 2 - 40
-        spacing = 64
-
-        for index, (label, _) in enumerate(self.options):
-            is_selected = index == self.selected_index
-            color = RED if is_selected else WHITE
-            option_text = self.option_font.render(label, True, color)
-            option_rect = option_text.get_rect(
-                center=(WIDTH // 2, first_option_y + index * spacing)
-            )
-            self.option_rects.append(option_rect)
-
-            if is_selected:
-                arrow = self.option_font.render(">", True, RED)
-                arrow_rect = arrow.get_rect(
-                    midright=(option_rect.left - 24, option_rect.centery)
-                )
-                surface.blit(arrow, arrow_rect)
-
-            surface.blit(option_text, option_rect)
+        rect = self.option_rects[self.selected_index]
+        arrow = self.arrow_font.render(">", True, WHITE)
+        arrow_rect = arrow.get_rect(midright=(rect.left - 12, rect.centery))
+        surface.blit(arrow, arrow_rect)
 
     def _confirm_selection(self):
         """Run the action associated with the selected menu option."""
@@ -95,19 +80,28 @@ class MenuScene(Scene):
             self.game.change_scene(action)
 
     def _select_option_at(self, position):
-        """Select the option under the cursor, if there is one."""
+        """Select the option under the cursor, if any."""
         for index, rect in enumerate(self.option_rects):
             if rect.collidepoint(position):
                 self.selected_index = index
                 return True
-
         return False
 
-    def _draw_background(self, surface):
-        """Draw a simple vertical gradient background."""
-        for y in range(HEIGHT):
-            ratio = y / HEIGHT
-            red = int(BLUE[0] * (1 - ratio) + BLACK[0] * ratio)
-            green = int(BLUE[1] * (1 - ratio) + BLACK[1] * ratio)
-            blue = int(BLUE[2] * (1 - ratio) + BLACK[2] * ratio)
-            pygame.draw.line(surface, (red, green, blue), (0, y), (WIDTH, y))
+    def _build_rects(self):
+        """Build the list of clickable rects aligned with the image buttons."""
+        rects = []
+        for i in range(len(self.options)):
+            rect = pygame.Rect(0, 0, _BTN_W, _BTN_H)
+            rect.center = (_BTN_CX, _FIRST_Y + i * _SPACING)
+            rects.append(rect)
+        return rects
+
+    def _load_background(self):
+        """Load and scale the cover image, falling back to a solid colour."""
+        try:
+            img = pygame.image.load(_BG_PATH).convert()
+            return pygame.transform.scale(img, (WIDTH, HEIGHT))
+        except (pygame.error, FileNotFoundError, OSError):
+            surf = pygame.Surface((WIDTH, HEIGHT))
+            surf.fill((30, 80, 180))
+            return surf

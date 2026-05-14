@@ -42,6 +42,7 @@ class GameOverScene(Scene):
             char_p2: Dicionario do personagem do jogador 2 (chave 'name').
         """
         super().__init__(game)
+        self._bg = AssetLoader.load_image("assets/images/ui/Fundo Padrão.png", scale=(WIDTH, HEIGHT))
         self.score_p1 = score_p1
         self.score_p2 = score_p2
         self.char_p1 = char_p1
@@ -150,12 +151,4 @@ class GameOverScene(Scene):
                 )
 
     def _draw_background(self, surface):
-        """Desenha um gradiente vertical de cinza escuro para preto.
-
-        Args:
-            surface: Superficie de destino.
-        """
-        for y in range(HEIGHT):
-            ratio = y / HEIGHT
-            value = int(GRAY[0] * (1 - ratio) + BLACK[0] * ratio)
-            pygame.draw.line(surface, (value, value, value), (0, y), (WIDTH, y))
+        surface.blit(self._bg, (0, 0))

@@ -49,6 +49,7 @@ class DifficultySelectScene(Scene):
                 ``'character_p2'`` e ``'stadium'`` já preenchidas.
         """
         super().__init__(game)
+        self._bg = AssetLoader.load_image("assets/images/ui/Fundo Padrão.png", scale=(WIDTH, HEIGHT))
         if not hasattr(game, 'config'):
             game.config = {}
 
@@ -140,18 +141,4 @@ class DifficultySelectScene(Scene):
         surface.blit(hint_surf, hint_surf.get_rect(center=(WIDTH // 2, HEIGHT - 36)))
 
     def _draw_background(self, surface):
-        """Desenha um gradiente vertical verde-escuro como fundo.
-
-        A cor diferente das telas anteriores indica que esta é a
-        etapa final antes de entrar em campo.
-
-        Args:
-            surface: Superfície de destino.
-        """
-        dark = (5, 20, 5)
-        for y in range(HEIGHT):
-            ratio = y / HEIGHT
-            r = int(GREEN[0] * (1 - ratio) + dark[0] * ratio)
-            g = int(GREEN[1] * (1 - ratio) + dark[1] * ratio)
-            b = int(GREEN[2] * (1 - ratio) + dark[2] * ratio)
-            pygame.draw.line(surface, (r, g, b), (0, y), (WIDTH, y))
+        surface.blit(self._bg, (0, 0))

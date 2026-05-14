@@ -45,6 +45,7 @@ class InstructionsScene(Scene):
             game: Instancia principal do jogo.
         """
         super().__init__(game)
+        self._bg = AssetLoader.load_image("assets/images/ui/Fundo Padrão.png", scale=(WIDTH, HEIGHT))
         self.font_title = AssetLoader.load_font(None, 64)
         self.font_section = AssetLoader.load_font(None, 36)
         self.font_body = AssetLoader.load_font(None, 28)
@@ -88,7 +89,7 @@ class InstructionsScene(Scene):
         Args:
             surface: pygame.Surface onde a cena sera renderizada.
         """
-        surface.fill(SKY_BLUE)
+        surface.blit(self._bg, (0, 0))
 
         title_surf = self.font_title.render("Como Jogar", True, BLACK)
         surface.blit(title_surf, title_surf.get_rect(center=(WIDTH // 2, 48)))
