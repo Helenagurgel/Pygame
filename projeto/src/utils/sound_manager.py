@@ -49,6 +49,14 @@ _MUSIC_FILES: dict[str, str] = {
     "gameplay": "gameplay.wav",
 }
 
+# Chave: name.lower() do personagem (conforme definido em character_select.py)
+_GOAL_CELEBRATION_FILES: dict[str, str] = {
+    "veloz":       "goal_veloz.mp3",
+    "saltador":    "goal_pulador.mp3",
+    "equilibrado": "gol_equilibrado.mp3",
+    "tanque":      "gol_tanque.mp3",
+}
+
 
 class SoundManager:
     """Loads and plays all game audio.
@@ -138,6 +146,30 @@ class SoundManager:
             sound.set_volume(self._sfx_volume)
 
         pygame.mixer.music.set_volume(self._music_volume)
+
+    def play_goal_celebration(self, character_name: str) -> None:
+        """Para a música atual e toca o som de gol do personagem via streaming.
+
+        Args:
+            character_name: Valor de ``character['name']`` (ex.: 'Veloz').
+                Se não existir mapeamento ou arquivo, cai no sfx genérico 'goal'.
+        """
+        filename = _GOAL_CELEBRATION_FILES.get(character_name.lower())
+        if filename:
+            path = os.path.join(_SFX_DIR, filename)
+            if os.path.isfile(path):
+                try:
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.load(path)
+                    pygame.mixer.music.set_volume(self._music_volume)
+                    pygame.mixer.music.play(0)
+                    self._current_music = "__celebration__"
+                    return
+                except pygame.error as exc:
+                    print(f"[SoundManager] falha ao tocar celebração '{character_name}': {exc}")
+
+        # Fallback: sfx genérico
+        self.play_sfx("goal")
 
     def register_stadium_music(self, name: str, path: str) -> None:
         """Register an additional music file under a given track name.

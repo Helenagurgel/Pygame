@@ -170,8 +170,12 @@ class GameplayScene(Scene):
         self._kick_glow_offset = _glow_r + 2
         self._kickoff_canvas = pygame.Surface((WIDTH, HEIGHT))
 
-        _music_name = stadium.get("music_name", "gameplay") if isinstance(stadium, dict) else "gameplay"
-        self.game.sounds.play_music(_music_name)
+        self._music_name = stadium.get("music_name", "gameplay") if isinstance(stadium, dict) else "gameplay"
+        self._player_characters = {
+            self.player1: self.character_p1,
+            self.player2: self.character_p2,
+        }
+        self.game.sounds.play_music(self._music_name)
 
     def handle_events(self, events):
         """Handle gameplay events, including ESC to pause."""
@@ -426,6 +430,8 @@ class GameplayScene(Scene):
                 )
 
         if self.celebration_timer <= 0:
+            self.game.sounds.stop_music()
+            self.game.sounds.play_music(self._music_name)
             self._scorer = None
             if self.golden_goal:
                 from src.scenes.game_over import GameOverScene
@@ -514,7 +520,8 @@ class GameplayScene(Scene):
                 count=7,
             )
         self.particles.emit_sparkle(*self.ball.rect.center, count=12)
-        self.game.sounds.play_sfx("goal")
+        char_name = self._player_characters[scorer].get("name", "")
+        self.game.sounds.play_goal_celebration(char_name)
         self.game.sounds.play_sfx("whistle")
 
     def _reset_positions(self):
