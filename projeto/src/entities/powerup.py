@@ -74,15 +74,20 @@ class FireBall(PowerUp):
     name = "FireBall"
 
     def _create_icon(self) -> pygame.Surface:
-        surf = pygame.Surface((_ICON_RADIUS * 2, _ICON_RADIUS * 2), pygame.SRCALPHA)
-        pygame.draw.circle(surf, (220, 80, 0), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
-        pygame.draw.circle(surf, (255, 200, 50), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS - 7)
-        for i in range(6):
-            angle = math.radians(i * 60)
-            cx = _ICON_RADIUS + math.cos(angle) * (_ICON_RADIUS - 9)
-            cy = _ICON_RADIUS + math.sin(angle) * (_ICON_RADIUS - 9)
-            pygame.draw.circle(surf, (255, 60, 0), (int(cx), int(cy)), 4)
-        return surf
+        size = _ICON_RADIUS * 2
+        try:
+            img = pygame.image.load("assets/images/powerups/FireBall.png").convert_alpha()
+            return pygame.transform.scale(img, (size, size))
+        except (pygame.error, FileNotFoundError, OSError):
+            surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (220, 80, 0), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
+            pygame.draw.circle(surf, (255, 200, 50), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS - 7)
+            for i in range(6):
+                angle = math.radians(i * 60)
+                cx = _ICON_RADIUS + math.cos(angle) * (_ICON_RADIUS - 9)
+                cy = _ICON_RADIUS + math.sin(angle) * (_ICON_RADIUS - 9)
+                pygame.draw.circle(surf, (255, 60, 0), (int(cx), int(cy)), 4)
+            return surf
 
     def apply(self, target) -> None:
         """Set kick multiplier and fire flag on the ball."""
@@ -107,14 +112,19 @@ class GiantPlayer(PowerUp):
     name = "GiantPlayer"
 
     def _create_icon(self) -> pygame.Surface:
-        surf = pygame.Surface((_ICON_RADIUS * 2, _ICON_RADIUS * 2), pygame.SRCALPHA)
-        pygame.draw.circle(surf, (50, 200, 80), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
-        cx, cy = _ICON_RADIUS, _ICON_RADIUS
-        pygame.draw.polygon(surf, (255, 255, 255), [
-            (cx, cy - 14), (cx - 9, cy - 3), (cx + 9, cy - 3),
-        ])
-        pygame.draw.rect(surf, (255, 255, 255), pygame.Rect(cx - 4, cy - 3, 8, 13))
-        return surf
+        size = _ICON_RADIUS * 2
+        try:
+            img = pygame.image.load("assets/images/powerups/BigPlayer.png").convert_alpha()
+            return pygame.transform.scale(img, (size, size))
+        except (pygame.error, FileNotFoundError, OSError):
+            surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (50, 200, 80), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
+            cx, cy = _ICON_RADIUS, _ICON_RADIUS
+            pygame.draw.polygon(surf, (255, 255, 255), [
+                (cx, cy - 14), (cx - 9, cy - 3), (cx + 9, cy - 3),
+            ])
+            pygame.draw.rect(surf, (255, 255, 255), pygame.Rect(cx - 4, cy - 3, 8, 13))
+            return surf
 
     def apply(self, target) -> None:
         """Double the player's size multiplier."""
@@ -138,18 +148,23 @@ class Freeze(PowerUp):
     name = "Freeze"
 
     def _create_icon(self) -> pygame.Surface:
-        surf = pygame.Surface((_ICON_RADIUS * 2, _ICON_RADIUS * 2), pygame.SRCALPHA)
-        pygame.draw.circle(surf, (100, 180, 255), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
-        cx, cy = _ICON_RADIUS, _ICON_RADIUS
-        for angle in range(0, 180, 60):
-            rad = math.radians(angle)
-            x1 = cx + math.cos(rad) * (_ICON_RADIUS - 4)
-            y1 = cy + math.sin(rad) * (_ICON_RADIUS - 4)
-            x2 = cx - math.cos(rad) * (_ICON_RADIUS - 4)
-            y2 = cy - math.sin(rad) * (_ICON_RADIUS - 4)
-            pygame.draw.line(surf, (220, 240, 255), (int(x1), int(y1)), (int(x2), int(y2)), 3)
-        pygame.draw.circle(surf, (220, 240, 255), (cx, cy), 5)
-        return surf
+        size = _ICON_RADIUS * 2
+        try:
+            img = pygame.image.load("assets/images/powerups/Freeze.png").convert_alpha()
+            return pygame.transform.scale(img, (size, size))
+        except (pygame.error, FileNotFoundError, OSError):
+            surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (100, 180, 255), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
+            cx, cy = _ICON_RADIUS, _ICON_RADIUS
+            for angle in range(0, 180, 60):
+                rad = math.radians(angle)
+                x1 = cx + math.cos(rad) * (_ICON_RADIUS - 4)
+                y1 = cy + math.sin(rad) * (_ICON_RADIUS - 4)
+                x2 = cx - math.cos(rad) * (_ICON_RADIUS - 4)
+                y2 = cy - math.sin(rad) * (_ICON_RADIUS - 4)
+                pygame.draw.line(surf, (220, 240, 255), (int(x1), int(y1)), (int(x2), int(y2)), 3)
+            pygame.draw.circle(surf, (220, 240, 255), (cx, cy), 5)
+            return surf
 
     def apply(self, target) -> None:
         """Freeze the opponent player."""
@@ -176,17 +191,22 @@ class LowGravity(PowerUp):
         self._original_gravity: float = 1.0
 
     def _create_icon(self) -> pygame.Surface:
-        surf = pygame.Surface((_ICON_RADIUS * 2, _ICON_RADIUS * 2), pygame.SRCALPHA)
-        pygame.draw.circle(surf, (180, 120, 255), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
-        cx, cy = _ICON_RADIUS, _ICON_RADIUS
-        for off in (-6, 6):
-            pygame.draw.polygon(surf, (255, 255, 255), [
-                (cx + off, cy - 12),
-                (cx + off - 5, cy - 4),
-                (cx + off + 5, cy - 4),
-            ])
-            pygame.draw.rect(surf, (255, 255, 255), pygame.Rect(cx + off - 2, cy - 4, 5, 11))
-        return surf
+        size = _ICON_RADIUS * 2
+        try:
+            img = pygame.image.load("assets/images/powerups/Low_Gravity.png").convert_alpha()
+            return pygame.transform.scale(img, (size, size))
+        except (pygame.error, FileNotFoundError, OSError):
+            surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (180, 120, 255), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
+            cx, cy = _ICON_RADIUS, _ICON_RADIUS
+            for off in (-6, 6):
+                pygame.draw.polygon(surf, (255, 255, 255), [
+                    (cx + off, cy - 12),
+                    (cx + off - 5, cy - 4),
+                    (cx + off + 5, cy - 4),
+                ])
+                pygame.draw.rect(surf, (255, 255, 255), pygame.Rect(cx + off - 2, cy - 4, 5, 11))
+            return surf
 
     def apply(self, target) -> None:
         """Reduce the scene gravity to 30 % of its current value."""
@@ -209,20 +229,25 @@ class BigBall(PowerUp):
     name = "BigBall"
 
     def _create_icon(self) -> pygame.Surface:
-        surf = pygame.Surface((_ICON_RADIUS * 2, _ICON_RADIUS * 2), pygame.SRCALPHA)
-        pygame.draw.circle(surf, (230, 100, 20), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
-        pygame.draw.circle(surf, (255, 255, 255), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS - 6)
-        pygame.draw.circle(surf, (40, 40, 40), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS - 6, 2)
-        cx, cy = _ICON_RADIUS, _ICON_RADIUS
-        for angle, dx, dy in [(90, 0, -1), (270, 0, 1), (0, 1, 0), (180, -1, 0)]:
-            tip_x = cx + dx * (_ICON_RADIUS - 1)
-            tip_y = cy + dy * (_ICON_RADIUS - 1)
-            pygame.draw.polygon(surf, (230, 100, 20), [
-                (tip_x, tip_y),
-                (tip_x - dy * 4 - dx * 5, tip_y - dx * 4 - dy * 5),
-                (tip_x + dy * 4 - dx * 5, tip_y + dx * 4 - dy * 5),
-            ])
-        return surf
+        size = _ICON_RADIUS * 2
+        try:
+            img = pygame.image.load("assets/images/powerups/BigBall.png").convert_alpha()
+            return pygame.transform.scale(img, (size, size))
+        except (pygame.error, FileNotFoundError, OSError):
+            surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (230, 100, 20), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
+            pygame.draw.circle(surf, (255, 255, 255), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS - 6)
+            pygame.draw.circle(surf, (40, 40, 40), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS - 6, 2)
+            cx, cy = _ICON_RADIUS, _ICON_RADIUS
+            for angle, dx, dy in [(90, 0, -1), (270, 0, 1), (0, 1, 0), (180, -1, 0)]:
+                tip_x = cx + dx * (_ICON_RADIUS - 1)
+                tip_y = cy + dy * (_ICON_RADIUS - 1)
+                pygame.draw.polygon(surf, (230, 100, 20), [
+                    (tip_x, tip_y),
+                    (tip_x - dy * 4 - dx * 5, tip_y - dx * 4 - dy * 5),
+                    (tip_x + dy * 4 - dx * 5, tip_y + dx * 4 - dy * 5),
+                ])
+            return surf
 
     def apply(self, target) -> None:
         """Double the ball's size."""
@@ -244,23 +269,28 @@ class SmallBall(PowerUp):
     name = "SmallBall"
 
     def _create_icon(self) -> pygame.Surface:
-        surf = pygame.Surface((_ICON_RADIUS * 2, _ICON_RADIUS * 2), pygame.SRCALPHA)
-        pygame.draw.circle(surf, (20, 180, 200), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
-        pygame.draw.circle(surf, (255, 255, 255), (_ICON_RADIUS, _ICON_RADIUS), (_ICON_RADIUS - 6) // 2)
-        pygame.draw.circle(surf, (40, 40, 40), (_ICON_RADIUS, _ICON_RADIUS), (_ICON_RADIUS - 6) // 2, 2)
-        cx, cy = _ICON_RADIUS, _ICON_RADIUS
-        for dx, dy in [(0, -1), (0, 1), (1, 0), (-1, 0)]:
-            outer_x = cx + dx * (_ICON_RADIUS - 2)
-            outer_y = cy + dy * (_ICON_RADIUS - 2)
-            inner_x = cx + dx * ((_ICON_RADIUS - 6) // 2 + 4)
-            inner_y = cy + dy * ((_ICON_RADIUS - 6) // 2 + 4)
-            pygame.draw.line(surf, (20, 180, 200), (outer_x, outer_y), (inner_x, inner_y), 3)
-            pygame.draw.polygon(surf, (20, 180, 200), [
-                (inner_x, inner_y),
-                (inner_x - dy * 3 + dx * 4, inner_y - dx * 3 + dy * 4),
-                (inner_x + dy * 3 + dx * 4, inner_y + dx * 3 + dy * 4),
-            ])
-        return surf
+        size = _ICON_RADIUS * 2
+        try:
+            img = pygame.image.load("assets/images/powerups/SmallBall.png").convert_alpha()
+            return pygame.transform.scale(img, (size, size))
+        except (pygame.error, FileNotFoundError, OSError):
+            surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (20, 180, 200), (_ICON_RADIUS, _ICON_RADIUS), _ICON_RADIUS)
+            pygame.draw.circle(surf, (255, 255, 255), (_ICON_RADIUS, _ICON_RADIUS), (_ICON_RADIUS - 6) // 2)
+            pygame.draw.circle(surf, (40, 40, 40), (_ICON_RADIUS, _ICON_RADIUS), (_ICON_RADIUS - 6) // 2, 2)
+            cx, cy = _ICON_RADIUS, _ICON_RADIUS
+            for dx, dy in [(0, -1), (0, 1), (1, 0), (-1, 0)]:
+                outer_x = cx + dx * (_ICON_RADIUS - 2)
+                outer_y = cy + dy * (_ICON_RADIUS - 2)
+                inner_x = cx + dx * ((_ICON_RADIUS - 6) // 2 + 4)
+                inner_y = cy + dy * ((_ICON_RADIUS - 6) // 2 + 4)
+                pygame.draw.line(surf, (20, 180, 200), (outer_x, outer_y), (inner_x, inner_y), 3)
+                pygame.draw.polygon(surf, (20, 180, 200), [
+                    (inner_x, inner_y),
+                    (inner_x - dy * 3 + dx * 4, inner_y - dx * 3 + dy * 4),
+                    (inner_x + dy * 3 + dx * 4, inner_y + dx * 3 + dy * 4),
+                ])
+            return surf
 
     def apply(self, target) -> None:
         """Halve the ball's size."""
