@@ -154,7 +154,10 @@ class GameplayScene(Scene):
         self.hud_font = pygame.font.Font(None, 64)
         self.timer_font = pygame.font.Font(None, 42)
         self.goal_font = pygame.font.Font(None, 120)
+        self.golden_goal_font = pygame.font.Font(None, 38)
         self._scorer = None
+        self.golden_goal = False
+        self._golden_goal_blink = 0.0
 
         # Pre-create fixed-size surfaces used every frame to avoid per-frame allocation.
         _glow_r = BALL_RADIUS + 8
@@ -195,18 +198,24 @@ class GameplayScene(Scene):
             return
 
         self.time_left = max(0, self.time_left - dt)
-        if self.time_left <= 0:
-            from src.scenes.game_over import GameOverScene
-            self.game.change_scene(
-                GameOverScene(
-                    self.game,
-                    self.score_p1,
-                    self.score_p2,
-                    self.character_p1,
-                    self.character_p2,
+        if self.time_left <= 0 and not self.golden_goal:
+            if self.score_p1 == self.score_p2:
+                self.golden_goal = True
+            else:
+                from src.scenes.game_over import GameOverScene
+                self.game.change_scene(
+                    GameOverScene(
+                        self.game,
+                        self.score_p1,
+                        self.score_p2,
+                        self.character_p1,
+                        self.character_p2,
+                    )
                 )
-            )
-            return
+                return
+
+        if self.golden_goal:
+            self._golden_goal_blink += dt
 
         if self.state == "kickoff":
             self.kickoff_timer -= dt
@@ -372,20 +381,29 @@ class GameplayScene(Scene):
         backgrounds.
         """
         score_text = f"{self.score_p1}  x  {self.score_p2}"
-        time_text = str(max(0, int(self.time_left)))
 
         score_shadow = self.hud_font.render(score_text, True, BLACK)
         score_surface = self.hud_font.render(score_text, True, YELLOW)
-        time_shadow = self.timer_font.render(time_text, True, BLACK)
-        time_surface = self.timer_font.render(time_text, True, WHITE)
-
         score_rect = score_surface.get_rect(center=(WIDTH // 2, 38))
-        time_rect = time_surface.get_rect(center=(WIDTH // 2, 88))
-
         surface.blit(score_shadow, score_rect.move(3, 3))
         surface.blit(score_surface, score_rect)
-        surface.blit(time_shadow, time_rect.move(2, 2))
-        surface.blit(time_surface, time_rect)
+
+        if self.golden_goal:
+            if int(self._golden_goal_blink * 4) % 2 == 0:
+                gg_color = (255, 215, 0)
+                gg_text = "GOL DE OURO!"
+                gg_shadow = self.golden_goal_font.render(gg_text, True, BLACK)
+                gg_surface = self.golden_goal_font.render(gg_text, True, gg_color)
+                gg_rect = gg_surface.get_rect(center=(WIDTH // 2, 88))
+                surface.blit(gg_shadow, gg_rect.move(2, 2))
+                surface.blit(gg_surface, gg_rect)
+        else:
+            time_text = str(max(0, int(self.time_left)))
+            time_shadow = self.timer_font.render(time_text, True, BLACK)
+            time_surface = self.timer_font.render(time_text, True, WHITE)
+            time_rect = time_surface.get_rect(center=(WIDTH // 2, 88))
+            surface.blit(time_shadow, time_rect.move(2, 2))
+            surface.blit(time_surface, time_rect)
 
     def _update_celebration(self, dt):
         """Animate the scorer, particles, and the sparkle trickle during the post-goal window.
@@ -409,6 +427,18 @@ class GameplayScene(Scene):
 
         if self.celebration_timer <= 0:
             self._scorer = None
+            if self.golden_goal:
+                from src.scenes.game_over import GameOverScene
+                self.game.change_scene(
+                    GameOverScene(
+                        self.game,
+                        self.score_p1,
+                        self.score_p2,
+                        self.character_p1,
+                        self.character_p2,
+                    )
+                )
+                return
             self._reset_positions()
             self.state = "kickoff"
             self.kickoff_timer = KICKOFF_DURATION
