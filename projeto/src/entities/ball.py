@@ -13,25 +13,13 @@ class Ball(pygame.sprite.Sprite):
     """Soccer ball sprite controlled by simple arcade physics."""
 
     def __init__(self, x, y, image):
-        """Create a ball centered at the given position.
-
-        Args:
-            x: Initial horizontal center position.
-            y: Initial vertical center position.
-            image: pygame.Surface used as the ball sprite. It is scaled to
-                BALL_RADIUS * 2 in both dimensions and stored as the base
-                image for future visual rotations.
-
-        The ball starts stopped, creates a rect centered on (x, y), builds a
-        mask for pixel-perfect collisions, and initializes its visual rotation
-        angle at zero degrees.
-        """
         super().__init__()
         diameter = BALL_RADIUS * 2
         w, h = image.get_size()
         side = min(w, h)
         cropped = image.subsurface(((w - side) // 2, (h - side) // 2, side, side))
-        self._base_image = pygame.transform.scale(cropped, (diameter, diameter))
+        scaled = pygame.transform.scale(cropped, (diameter, diameter))
+        self._base_image = self._make_circular(scaled, diameter)
         self.original_image = self._base_image
         self.image = self.original_image
         self.rect = self.image.get_rect(center=(x, y))
@@ -43,6 +31,7 @@ class Ball(pygame.sprite.Sprite):
         self.kick_mult = 1.0
         self.on_fire = False
         self.just_bounced = False
+        self.on_ground = False
         self.size_mult = 1.0
 
     def update(self, dt, ground_y, screen_width, gravity_mult=1.0):
@@ -76,6 +65,9 @@ class Ball(pygame.sprite.Sprite):
             self.just_bounced = abs(self.vel_y) > BALL_BOUNCE_SOUND_MIN_VEL
             self.vel_y *= -BALL_BOUNCE
             self.vel_x *= BALL_FRICTION
+            self.on_ground = True
+        else:
+            self.on_ground = False
 
         if self.rect.left < 0:
             self.rect.left = 0
@@ -137,11 +129,25 @@ class Ball(pygame.sprite.Sprite):
         self.kick_mult = 1.0
         self.on_fire = False
         self.just_bounced = False
+        self.on_ground = False
         self.size_mult = 1.0
         self.original_image = self._base_image
         self.image = self.original_image
         self.rect = self.image.get_rect(center=(x, y))
         self.mask = pygame.mask.from_surface(self.image)
+
+    @staticmethod
+    def _make_circular(surface, diameter):
+        """Return a copy of *surface* with pixels outside the inscribed circle made transparent."""
+        radius = diameter // 2
+        circular = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+        circular.fill((0, 0, 0, 0))
+        circular.blit(surface, (0, 0))
+        mask = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+        mask.fill((0, 0, 0, 0))
+        pygame.draw.circle(mask, (255, 255, 255, 255), (radius, radius), radius)
+        circular.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        return circular
 
     def _rotate_from_velocity(self):
         """Rotate the visual ball image according to horizontal speed."""

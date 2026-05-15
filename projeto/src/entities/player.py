@@ -195,6 +195,13 @@ class Player(pygame.sprite.Sprite):
         if distance == 0 or distance >= KICK_RANGE:
             return None
 
+        # Ball in the air → purely horizontal kick
+        ball_on_ground = getattr(ball, "on_ground", True)
+        if not ball_on_ground:
+            horiz_dir = 1 if dx >= 0 else -1
+            self._kick_applied = True
+            return (horiz_dir * KICK_FORCE * self.force_mult, 0)
+
         direction_x = dx / distance
         direction_y = dy / distance
 
@@ -203,8 +210,6 @@ class Player(pygame.sprite.Sprite):
         t = distance / KICK_RANGE
         vert_t = max(0.0, min(1.0, (dy + PLAYER_HEIGHT * 0.5) / PLAYER_HEIGHT))
         height_bias = KICK_BIAS_NEAR + (KICK_BIAS_FAR - KICK_BIAS_NEAR) * t + KICK_BIAS_BODY * vert_t
-        if not self.on_ground:
-            height_bias *= 0.25
         kick_dy = min(direction_y, 0) - height_bias
         kick_len = math.hypot(direction_x, kick_dy)
         norm = kick_len if kick_len > 0 else 1.0
