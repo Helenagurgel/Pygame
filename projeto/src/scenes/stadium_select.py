@@ -8,7 +8,7 @@ jogadores, inicia a partida diretamente.
 
 import pygame
 
-from src.scenes.base_scene import Scene
+from src.scenes.base_scene import Scene, blit_outlined
 from src.settings import BLACK, BLUE, HEIGHT, WHITE, WIDTH, YELLOW
 from src.utils.asset_loader import AssetLoader
 
@@ -143,8 +143,7 @@ class StadiumSelectScene(Scene):
         """
         self._draw_background(surface)
 
-        title_surf = self.font_title.render("Escolha o Estádio", True, WHITE)
-        surface.blit(title_surf, title_surf.get_rect(center=(WIDTH // 2, 55)))
+        blit_outlined(surface, self.font_title, "Escolha o Estádio", WHITE, (WIDTH // 2, 55))
 
         stadium = STADIUMS[self.selected_index]
         thumb = self._thumbnails[self.selected_index]
@@ -154,23 +153,31 @@ class StadiumSelectScene(Scene):
         # Borda ao redor do thumbnail
         pygame.draw.rect(surface, YELLOW, thumb_rect.inflate(6, 6), 3)
 
-        name_surf = self.font_name.render(stadium['name'], True, WHITE)
-        surface.blit(name_surf, name_surf.get_rect(center=(WIDTH // 2, thumb_rect.bottom + 28)))
+        # Setas de navegação laterais
+        nav_font = self.font_name
+        nav_y = thumb_rect.centery
+        nav_left_x = thumb_rect.left - 30
+        nav_right_x = thumb_rect.right + 30
+        for text, cx in (("◀", nav_left_x), ("▶", nav_right_x)):
+            shd = nav_font.render(text, True, (0, 0, 0))
+            surface.blit(shd, shd.get_rect(center=(cx + 2, nav_y + 2)))
+            arr = nav_font.render(text, True, YELLOW)
+            surface.blit(arr, arr.get_rect(center=(cx, nav_y)))
 
-        desc_surf = self.font_desc.render(stadium['description'], True, WHITE)
-        surface.blit(desc_surf, desc_surf.get_rect(center=(WIDTH // 2, thumb_rect.bottom + 66)))
+        blit_outlined(surface, self.font_name, stadium['name'], YELLOW,
+                      (WIDTH // 2, thumb_rect.bottom + 28))
+        blit_outlined(surface, self.font_desc, stadium['description'], WHITE,
+                      (WIDTH // 2, thumb_rect.bottom + 66))
 
         stats_text = (
             f"Gravidade ×{stadium['gravity_mult']:.1f}   "
             f"Atrito ×{stadium['friction_mult']:.1f}"
         )
-        stats_surf = self.font_stats.render(stats_text, True, YELLOW)
-        surface.blit(stats_surf, stats_surf.get_rect(center=(WIDTH // 2, thumb_rect.bottom + 100)))
+        blit_outlined(surface, self.font_stats, stats_text, YELLOW,
+                      (WIDTH // 2, thumb_rect.bottom + 100))
 
-        hint_surf = self.font_hint.render(
-            "← → Navegar   ENTER Confirmar   ESC Voltar", True, WHITE
-        )
-        surface.blit(hint_surf, hint_surf.get_rect(center=(WIDTH // 2, HEIGHT - 36)))
+        blit_outlined(surface, self.font_hint, "← → Navegar   ENTER Confirmar   ESC Voltar",
+                      WHITE, (WIDTH // 2, HEIGHT - 36))
 
     def _draw_background(self, surface):
         surface.blit(self._bg, (0, 0))

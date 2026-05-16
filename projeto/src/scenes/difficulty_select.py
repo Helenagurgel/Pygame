@@ -6,7 +6,7 @@ Permite ao jogador escolher o nível do CPU antes de iniciar a partida.
 
 import pygame
 
-from src.scenes.base_scene import Scene
+from src.scenes.base_scene import Scene, blit_outlined
 from src.settings import BLACK, GREEN, HEIGHT, WHITE, WIDTH, YELLOW
 from src.utils.asset_loader import AssetLoader
 
@@ -111,34 +111,28 @@ class DifficultySelectScene(Scene):
         """
         self._draw_background(surface)
 
-        title_surf = self.font_title.render("Escolha a dificuldade", True, WHITE)
-        surface.blit(title_surf, title_surf.get_rect(center=(WIDTH // 2, 70)))
+        blit_outlined(surface, self.font_title, "Escolha a dificuldade", WHITE, (WIDTH // 2, 70))
 
         for i, diff in enumerate(DIFFICULTIES):
             is_selected = i == self.selected_index
             color = YELLOW if is_selected else WHITE
-            option_surf = self.font_option.render(diff['name'], True, color)
-            option_rect = option_surf.get_rect(
-                center=(WIDTH // 2, _LIST_TOP + i * _OPTION_SPACING)
-            )
-            surface.blit(option_surf, option_rect)
+            cy = _LIST_TOP + i * _OPTION_SPACING
+            option_rect = blit_outlined(surface, self.font_option, diff['name'], color, (WIDTH // 2, cy))
 
             if is_selected:
-                arrow_surf = self.font_option.render("▶", True, YELLOW)
-                arrow_rect = arrow_surf.get_rect(
-                    midright=(option_rect.left - 18, option_rect.centery)
-                )
-                surface.blit(arrow_surf, arrow_rect)
+                arr_x = option_rect.left - 18
+                arr_y = option_rect.centery
+                arr_shd = self.font_option.render("▶", True, (0, 0, 0))
+                surface.blit(arr_shd, arr_shd.get_rect(midright=(arr_x + 2, arr_y + 2)))
+                arr = self.font_option.render("▶", True, YELLOW)
+                surface.blit(arr, arr.get_rect(midright=(arr_x, arr_y)))
 
         desc = DIFFICULTIES[self.selected_index]['description']
-        desc_surf = self.font_desc.render(desc, True, WHITE)
         desc_y = _LIST_TOP + len(DIFFICULTIES) * _OPTION_SPACING + 20
-        surface.blit(desc_surf, desc_surf.get_rect(center=(WIDTH // 2, desc_y)))
+        blit_outlined(surface, self.font_desc, desc, WHITE, (WIDTH // 2, desc_y))
 
-        hint_surf = self.font_hint.render(
-            "↑ ↓ Navegar   ENTER Confirmar   ESC Voltar", True, WHITE
-        )
-        surface.blit(hint_surf, hint_surf.get_rect(center=(WIDTH // 2, HEIGHT - 36)))
+        blit_outlined(surface, self.font_hint, "↑ ↓ Navegar   ENTER Confirmar   ESC Voltar",
+                      WHITE, (WIDTH // 2, HEIGHT - 36))
 
     def _draw_background(self, surface):
         surface.blit(self._bg, (0, 0))

@@ -10,8 +10,8 @@ import random
 
 import pygame
 
-from src.scenes.base_scene import Scene
-from src.settings import BLACK, GRAY, HEIGHT, SKY_BLUE, WIDTH
+from src.scenes.base_scene import Scene, blit_outlined
+from src.settings import GRAY, HEIGHT, SKY_BLUE, WHITE, WIDTH, YELLOW
 from src.utils.asset_loader import AssetLoader
 
 CHARACTERS = [
@@ -178,8 +178,7 @@ class CharacterSelectScene(Scene):
         """Exibe o personagem sorteado para a CPU por _REVEAL_DURATION segundos."""
         surface.blit(self._bg, (0, 0))
 
-        title = self.font_title.render("A CPU vai usar...", True, BLACK)
-        surface.blit(title, title.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 160)))
+        blit_outlined(surface, self.font_title, "A CPU vai usar...", WHITE, (WIDTH // 2, HEIGHT // 2 - 160))
 
         char = self._cpu_char
         char_idx = CHARACTERS.index(char)
@@ -188,17 +187,14 @@ class CharacterSelectScene(Scene):
         h = int(_PREVIEW_H * 1.4 * pulse)
         self._blit_preview(surface, char_idx, center=(WIDTH // 2, HEIGHT // 2 - 10), w=w, h=h)
 
-        name_surf = self.font_name.render(char['name'], True, BLACK)
-        surface.blit(name_surf, name_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 120)))
-
-        desc_surf = self.font_desc.render(char['description'], True, BLACK)
-        surface.blit(desc_surf, desc_surf.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 158)))
+        blit_outlined(surface, self.font_name, char['name'], YELLOW, (WIDTH // 2, HEIGHT // 2 + 120))
+        blit_outlined(surface, self.font_desc, char['description'], WHITE, (WIDTH // 2, HEIGHT // 2 + 158))
 
         progress = min(self._reveal_timer / _REVEAL_DURATION, 1.0)
         bar_w = int(WIDTH * 0.4 * progress)
         bar_x = WIDTH // 2 - int(WIDTH * 0.2)
-        pygame.draw.rect(surface, GRAY, (bar_x, HEIGHT - 50, int(WIDTH * 0.4), 10), border_radius=5)
-        pygame.draw.rect(surface, BLACK, (bar_x, HEIGHT - 50, bar_w, 10), border_radius=5)
+        pygame.draw.rect(surface, (60, 60, 60), (bar_x, HEIGHT - 50, int(WIDTH * 0.4), 10), border_radius=5)
+        pygame.draw.rect(surface, (80, 200, 80), (bar_x, HEIGHT - 50, bar_w, 10), border_radius=5)
 
     def draw(self, surface):
         """Desenha o carrossel, nome, descrição e instruções de navegação.
@@ -213,8 +209,7 @@ class CharacterSelectScene(Scene):
         surface.blit(self._bg, (0, 0))
 
         title_text = f"Escolha seu personagem (P{self.current_player})"
-        title_surf = self.font_title.render(title_text, True, BLACK)
-        surface.blit(title_surf, title_surf.get_rect(center=(WIDTH // 2, 60)))
+        blit_outlined(surface, self.font_title, title_text, WHITE, (WIDTH // 2, 60))
 
         idx = self._active_index
         n = len(CHARACTERS)
@@ -236,11 +231,8 @@ class CharacterSelectScene(Scene):
             w=int(_PREVIEW_W * pulse), h=int(_PREVIEW_H * pulse),
         )
 
-        name_surf = self.font_name.render(CHARACTERS[idx]['name'], True, BLACK)
-        surface.blit(name_surf, name_surf.get_rect(center=(WIDTH // 2, _CAROUSEL_Y + 110)))
-
-        desc_surf = self.font_desc.render(CHARACTERS[idx]['description'], True, BLACK)
-        surface.blit(desc_surf, desc_surf.get_rect(center=(WIDTH // 2, _CAROUSEL_Y + 148)))
+        blit_outlined(surface, self.font_name, CHARACTERS[idx]['name'], YELLOW, (WIDTH // 2, _CAROUSEL_Y + 110))
+        blit_outlined(surface, self.font_desc, CHARACTERS[idx]['description'], WHITE, (WIDTH // 2, _CAROUSEL_Y + 148))
 
         char = CHARACTERS[idx]
         self._draw_stat_bar(surface, "Velocidade", char['speed_mult'], _CAROUSEL_Y + 178,
@@ -250,10 +242,8 @@ class CharacterSelectScene(Scene):
         self._draw_stat_bar(surface, "Força", char['force_mult'], _CAROUSEL_Y + 234,
                             color=(180, 60, 60))
 
-        hint_surf = self.font_hint.render(
-            "← → Navegar   ENTER Confirmar   ESC Voltar", True, BLACK
-        )
-        surface.blit(hint_surf, hint_surf.get_rect(center=(WIDTH // 2, HEIGHT - 36)))
+        blit_outlined(surface, self.font_hint, "← → Navegar   ENTER Confirmar   ESC Voltar",
+                      WHITE, (WIDTH // 2, HEIGHT - 36))
 
     def _draw_stat_bar(self, surface, label, value, y, color=(80, 180, 80)):
         """Draw a labeled stat bar showing the multiplier value numerically."""
@@ -262,17 +252,22 @@ class CharacterSelectScene(Scene):
         bar_h = 14
         fill_w = int(bar_w * min(value / max_val, 1.0))
         bar_x = WIDTH // 2 - bar_w // 2
+        mid_y = y + bar_h // 2
 
-        lbl = self.font_desc.render(label, True, BLACK)
-        surface.blit(lbl, lbl.get_rect(right=bar_x - 8, centery=y + bar_h // 2))
+        shd_lbl = self.font_desc.render(label, True, (0, 0, 0))
+        surface.blit(shd_lbl, shd_lbl.get_rect(right=bar_x - 6, centery=mid_y + 2))
+        lbl = self.font_desc.render(label, True, WHITE)
+        surface.blit(lbl, lbl.get_rect(right=bar_x - 8, centery=mid_y))
 
-        pygame.draw.rect(surface, (180, 180, 180), (bar_x, y, bar_w, bar_h), border_radius=4)
+        pygame.draw.rect(surface, (60, 60, 60), (bar_x, y, bar_w, bar_h), border_radius=4)
         if fill_w > 0:
             pygame.draw.rect(surface, color, (bar_x, y, fill_w, bar_h), border_radius=4)
-        pygame.draw.rect(surface, BLACK, (bar_x, y, bar_w, bar_h), 2, border_radius=4)
+        pygame.draw.rect(surface, WHITE, (bar_x, y, bar_w, bar_h), 2, border_radius=4)
 
-        val_text = self.font_hint.render(f"{value:.2f}×", True, BLACK)
-        surface.blit(val_text, val_text.get_rect(left=bar_x + bar_w + 8, centery=y + bar_h // 2))
+        shd_val = self.font_hint.render(f"{value:.2f}×", True, (0, 0, 0))
+        surface.blit(shd_val, shd_val.get_rect(left=bar_x + bar_w + 10, centery=mid_y + 2))
+        val_text = self.font_hint.render(f"{value:.2f}×", True, WHITE)
+        surface.blit(val_text, val_text.get_rect(left=bar_x + bar_w + 8, centery=mid_y))
 
     def _blit_preview(self, surface, char_index, center, w, h):
         """Blit o preview de um personagem numa posição e tamanho dados.

@@ -2,8 +2,8 @@
 
 import pygame
 
-from src.scenes.base_scene import Scene
-from src.settings import HEIGHT, WHITE, WIDTH
+from src.scenes.base_scene import Scene, blit_outlined
+from src.settings import HEIGHT, WHITE, WIDTH, YELLOW
 
 _BG_PATH = "assets/images/ui/Capa.png"
 
@@ -22,7 +22,6 @@ class MenuScene(Scene):
     def __init__(self, game):
         """Create menu state and load the background image."""
         super().__init__(game)
-        self.arrow_font = pygame.font.Font(None, 52)
         self.options = [
             ("1 Jogador",   "single_player"),
             ("2 Jogadores", "two_players"),
@@ -60,9 +59,21 @@ class MenuScene(Scene):
         surface.blit(self._bg, (0, 0))
 
         rect = self.option_rects[self.selected_index]
-        arrow = self.arrow_font.render(">", True, WHITE)
-        arrow_rect = arrow.get_rect(midright=(rect.left - 12, rect.centery))
-        surface.blit(arrow, arrow_rect)
+        tip_x = rect.left - 10
+        cy = rect.centery
+        size = 14
+        shadow_pts = [
+            (tip_x + 2, cy + 2),
+            (tip_x - size + 2, cy - size // 2 + 2),
+            (tip_x - size + 2, cy + size // 2 + 2),
+        ]
+        arrow_pts = [
+            (tip_x, cy),
+            (tip_x - size, cy - size // 2),
+            (tip_x - size, cy + size // 2),
+        ]
+        pygame.draw.polygon(surface, (0, 0, 0), shadow_pts)
+        pygame.draw.polygon(surface, YELLOW, arrow_pts)
 
     def _confirm_selection(self):
         """Run the action associated with the selected menu option."""
