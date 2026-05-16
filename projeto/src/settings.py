@@ -31,9 +31,6 @@ BALL_BOUNCE = 0.7       # coeficiente de restituição
 BALL_FRICTION = 0.99    # atrito do ar/chão aplicado à velocidade da bola
 KICK_FORCE = 22         # módulo fixo do vetor de chute
 JUMP_VELOCITY = -14     # velocidade vertical inicial do salto (negativo = para cima)
-KICK_BIAS_NEAR = 5.0    # viés vertical máximo (bola muito perto)
-KICK_BIAS_FAR = 0.3     # viés vertical mínimo (bola na borda do alcance)
-KICK_BIAS_BODY = 2.5    # viés extra quando bola está próxima dos pés do jogador
 
 # === Jogador ===
 PLAYER_SPEED = 6

@@ -6,9 +6,6 @@ import pygame
 
 from src.settings import (
     GRAVITY,
-    KICK_BIAS_BODY,
-    KICK_BIAS_FAR,
-    KICK_BIAS_NEAR,
     KICK_FORCE,
     KICK_RANGE,
     JUMP_VELOCITY,
@@ -195,22 +192,11 @@ class Player(pygame.sprite.Sprite):
         if distance == 0 or distance >= KICK_RANGE:
             return None
 
-        # Ball in the air → purely horizontal kick
-        ball_on_ground = getattr(ball, "on_ground", True)
-        if not ball_on_ground:
-            horiz_dir = 1 if dx >= 0 else -1
-            self._kick_applied = True
-            return (horiz_dir * KICK_FORCE * self.force_mult, 0)
-
         direction_x = dx / distance
         direction_y = dy / distance
 
-        # Distance bias: close kicks arc high, far kicks stay low.
-        # Body bias: ball near feet (dy large) arcs higher than ball near chest.
-        t = distance / KICK_RANGE
-        vert_t = max(0.0, min(1.0, (dy + PLAYER_HEIGHT * 0.5) / PLAYER_HEIGHT))
-        height_bias = KICK_BIAS_NEAR + (KICK_BIAS_FAR - KICK_BIAS_NEAR) * t + KICK_BIAS_BODY * vert_t
-        kick_dy = min(direction_y, 0) - height_bias
+        # Clamp vertical direction to never kick downward and add fixed upward bias.
+        kick_dy = min(direction_y, 0) - 0.5
         kick_len = math.hypot(direction_x, kick_dy)
         norm = kick_len if kick_len > 0 else 1.0
         force_x = (direction_x / norm) * KICK_FORCE * self.force_mult

@@ -12,7 +12,7 @@ from src.settings import GROUND_Y, WIDTH
 _SPAWN_INTERVAL_MS = 10_000
 _FLOAT_AMPLITUDE = 8    # pixels of vertical oscillation
 _FLOAT_SPEED = 2.0      # radians per second
-_ICON_RADIUS = 22
+_ICON_RADIUS = 40
 _SPAWN_X_MARGIN = 150
 _SPAWN_Y_MIN = int(GROUND_Y * 0.40)
 _SPAWN_Y_MAX = int(GROUND_Y * 0.70)
