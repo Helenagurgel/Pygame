@@ -473,11 +473,22 @@ class GameplayScene(Scene):
             nx = dx / length
             ny = dy / length
 
-            # Separate ball position so a walking player cannot carry the ball.
-            self.ball.rect.x += int(nx * 4)
-            self.ball.rect.y += int(ny * 4)
+            # Fully resolve penetration: push until masks no longer overlap.
+            for _ in range(30):
+                if not pygame.sprite.collide_mask(player, self.ball):
+                    break
+                mx = int(nx * 3) or (1 if nx >= 0 else -1)
+                my = int(ny * 3) or (1 if ny >= 0 else -1)
+                self.ball.rect.x += mx
+                self.ball.rect.y += my
 
-            approach = -(nx * self.ball.vel_x + ny * self.ball.vel_y)
+            # Reflect any inward velocity so the ball bounces off cleanly.
+            dot = self.ball.vel_x * nx + self.ball.vel_y * ny
+            approach = -dot
+            if dot < 0:
+                self.ball.vel_x -= 2 * dot * nx
+                self.ball.vel_y -= 2 * dot * ny
+
             if approach > 3:
                 self.game.sounds.play_sfx("bounce")
                 self.particles.emit_sparkle(*self.ball.rect.center, count=1)
