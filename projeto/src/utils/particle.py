@@ -1,5 +1,6 @@
 """Small particle effects used by gameplay scenes."""
 
+import math
 import random
 
 import pygame
@@ -159,6 +160,60 @@ class ParticleSystem:
                 color,
                 random.randint(2, 5),
                 random.randint(80, 180),
+            )
+            self.particles.add(particle)
+
+    def emit_fire(self, x, y, count=3):
+        """Emit upward fire particles from a burning ball.
+
+        Args:
+            x: Horizontal center of the emission point.
+            y: Vertical center of the emission point.
+            count: Number of fire particles to create.
+        """
+        for _ in range(count):
+            color = random.choice([
+                (255, 60, 0),
+                (255, 130, 0),
+                (255, 200, 30),
+                (255, 240, 120),
+            ])
+            particle = Particle(
+                x + random.uniform(-10, 10),
+                y + random.uniform(-4, 4),
+                random.uniform(-35, 35),
+                random.uniform(-90, -35),
+                color,
+                random.randint(4, 9),
+                random.randint(120, 320),
+            )
+            self.particles.add(particle)
+
+    def emit_ice(self, x, y, count=2):
+        """Emit ice crystal particles drifting around a frozen player.
+
+        Args:
+            x: Horizontal center of the emission area.
+            y: Vertical center of the emission area.
+            count: Number of ice particles to create.
+        """
+        for _ in range(count):
+            color = random.choice([
+                (180, 220, 255),
+                (200, 235, 255),
+                (140, 200, 245),
+                (220, 245, 255),
+            ])
+            angle = random.uniform(0, 2 * math.pi)
+            speed = random.uniform(15, 50)
+            particle = Particle(
+                x + random.uniform(-22, 22),
+                y + random.uniform(-30, 15),
+                math.cos(angle) * speed,
+                math.sin(angle) * speed - 25,
+                color,
+                random.randint(2, 5),
+                random.randint(450, 900),
             )
             self.particles.add(particle)
 

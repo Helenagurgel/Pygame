@@ -256,11 +256,19 @@ class GameplayScene(Scene):
             )
 
         if self.ball.on_fire:
-            self.particles.emit_sparkle(
+            self.particles.emit_fire(
                 self.ball.rect.centerx + random.randint(-8, 8),
-                self.ball.rect.centery + random.randint(-8, 8),
-                count=1,
+                self.ball.rect.top + random.randint(-4, 6),
+                count=2,
             )
+
+        for player in self.players:
+            if player.frozen:
+                self.particles.emit_ice(
+                    player.rect.centerx + random.randint(-player.rect.width // 3, player.rect.width // 3),
+                    player.rect.centery + random.randint(-player.rect.height // 2, player.rect.height // 4),
+                    count=1,
+                )
 
         # feito com IA: ações de chute têm prioridade sobre empurrões passivos.
         for player in self.players:
@@ -601,12 +609,43 @@ class GameplayScene(Scene):
         for player in self.players:
             if player.frozen:
                 overlay = pygame.Surface(player.rect.size, pygame.SRCALPHA)
-                overlay.fill((100, 180, 255, 110))
+                overlay.fill((100, 180, 255, 100))
                 surface.blit(overlay, player.rect)
+                # Snowflake crystal lines over the player
+                cx, cy = player.rect.center
+                r = min(player.rect.width, player.rect.height) // 2 - 4
+                for deg in range(0, 180, 30):
+                    rad = math.radians(deg)
+                    x1 = int(cx + math.cos(rad) * r)
+                    y1 = int(cy + math.sin(rad) * r)
+                    x2 = int(cx - math.cos(rad) * r)
+                    y2 = int(cy - math.sin(rad) * r)
+                    pygame.draw.line(surface, (210, 240, 255), (x1, y1), (x2, y2), 2)
+                # Branch ticks on each arm
+                for deg in range(0, 360, 30):
+                    rad = math.radians(deg)
+                    mid_r = r * 0.55
+                    mx = int(cx + math.cos(rad) * mid_r)
+                    my = int(cy + math.sin(rad) * mid_r)
+                    perp = math.radians(deg + 90)
+                    tick = r * 0.22
+                    pygame.draw.line(surface, (210, 240, 255),
+                        (int(mx + math.cos(perp) * tick), int(my + math.sin(perp) * tick)),
+                        (int(mx - math.cos(perp) * tick), int(my - math.sin(perp) * tick)), 2)
+                pygame.draw.circle(surface, (255, 255, 255), (cx, cy), 3)
+
         if self.ball.on_fire:
             overlay = pygame.Surface(self.ball.rect.size, pygame.SRCALPHA)
-            overlay.fill((255, 100, 0, 100))
+            overlay.fill((255, 100, 0, 80))
             surface.blit(overlay, self.ball.rect)
+            # Fire glow rings radiating outward
+            cx, cy = self.ball.rect.center
+            br = self.ball.rect.width // 2
+            for extra, alpha, width in ((14, 50, 5), (8, 90, 4), (3, 130, 3)):
+                r = br + extra
+                glow = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+                pygame.draw.circle(glow, (255, 150, 30, alpha), (r, r), r, width)
+                surface.blit(glow, (cx - r, cy - r))
 
     def _get_cpu_keys(self):
         """Return CPU key state from the difficulty-aware AI controller."""
