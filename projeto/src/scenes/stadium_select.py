@@ -14,28 +14,34 @@ from src.utils.asset_loader import AssetLoader
 
 STADIUMS = [
     {
-        'name': 'Estádio Clássico',
-        'background_path': 'assets/images/stadiums/Estádio.png',
+        'name': 'Estádio Normal',
+        'background_path': 'assets/images/stadiums/Estádio normal.png',
         'music_path': 'assets/sounds/music/classic.ogg',
         'gravity_mult': 1.0,
         'friction_mult': 1.0,
         'description': 'Campo padrão de futebol',
+        'goal_post_color': (245, 245, 245),
+        'goal_net_color': (200, 200, 200),
     },
     {
-        'name': 'Lua',
-        'background_path': 'assets/images/stadiums/Lua.png',
+        'name': 'Arena Galática',
+        'background_path': 'assets/images/stadiums/Arena Galática.png',
         'music_path': 'assets/sounds/music/moon.ogg',
         'gravity_mult': 0.4,
         'friction_mult': 1.0,
         'description': 'Gravidade reduzida — bola flutua mais',
+        'goal_post_color': (0, 240, 200),
+        'goal_net_color': (0, 180, 155),
     },
     {
         'name': 'Pista Gelada',
-        'background_path': 'assets/images/stadiums/Pista de Gelo.png',
+        'background_path': 'assets/images/stadiums/Pista gelada.png',
         'music_path': 'assets/sounds/music/ice.ogg',
         'gravity_mult': 1.0,
         'friction_mult': 0.7,
         'description': 'Atrito baixo — escorregadio',
+        'goal_post_color': (180, 220, 255),
+        'goal_net_color': (140, 190, 240),
     },
 ]
 

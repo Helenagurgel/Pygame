@@ -46,6 +46,11 @@ from src.utils.particle import ParticleSystem
 _TRAIL_SPEED_THRESHOLD = 8
 _KICKOFF_ZOOM_PEAK = 1.25
 
+_NET_COLS = 4
+_NET_ROWS = 9
+_NET_SPRING_K = 20.0
+_NET_DAMPING = 0.82
+
 
 class _PressedKeys:
     """Small key-state adapter used by the CPU player."""
@@ -151,6 +156,14 @@ class GameplayScene(Scene):
             GOAL_HEIGHT,
         )
 
+        def _make_nodes():
+            return [[[0.0, 0.0, 0.0, 0.0] for _ in range(_NET_COLS)] for _ in range(_NET_ROWS)]
+
+        self._net_nodes = {'left': _make_nodes(), 'right': _make_nodes()}
+        post_color, net_color = self._get_goal_colors(stadium)
+        self._goal_post_color = post_color
+        self._goal_net_color = net_color
+
         self.hud_font = pygame.font.Font(None, 64)
         self.timer_font = pygame.font.Font(None, 42)
         self.goal_font = pygame.font.Font(None, 120)
@@ -197,6 +210,8 @@ class GameplayScene(Scene):
         the score and start a two-second celebration, and time expiration
         changes to GameOverScene with both scores.
         """
+        self._step_net_physics(dt)
+
         if self.state == "celebrating":
             self._update_celebration(dt)
             return
@@ -509,27 +524,23 @@ class GameplayScene(Scene):
         """Detect goals, update score, and start celebration state."""
         if self.left_goal.collidepoint(self.ball.rect.center):
             self.score_p2 += 1
-            self._start_goal_celebration(self.player2, self.left_goal)
+            self._start_goal_celebration(self.player2, 'left')
         elif self.right_goal.collidepoint(self.ball.rect.center):
             self.score_p1 += 1
-            self._start_goal_celebration(self.player1, self.right_goal)
+            self._start_goal_celebration(self.player1, 'right')
 
-    def _start_goal_celebration(self, scorer, goal_rect):
+    def _start_goal_celebration(self, scorer, side):
         """Begin the two-second goal celebration after scoring.
 
         Args:
-            scorer: The Player who scored the goal. Their celebrate animation
-                will play for the duration of the celebration window.
-            goal_rect: The pygame.Rect of the goal mouth where the ball
-                entered, used to emit the particle burst at the right spot.
-
-        Emits a large particle burst inside the goal mouth and a secondary
-        burst at the ball position, stores the scorer for animation ticking,
-        and plays the goal and whistle sound effects.
+            scorer: The Player who scored the goal.
+            side: 'left' or 'right' — which goal was scored on.
         """
+        goal_rect = self.left_goal if side == 'left' else self.right_goal
         self._scorer = scorer
         self.state = "celebrating"
         self.celebration_timer = CELEBRATION_DURATION
+        saved_vx, saved_vy = self.ball.vel_x, self.ball.vel_y
         self.ball.vel_x = 0
         self.ball.vel_y = 0
         for _ in range(4):
@@ -542,6 +553,7 @@ class GameplayScene(Scene):
         char_name = self._player_characters[scorer].get("name", "")
         self.game.sounds.play_goal_celebration(char_name)
         self.game.sounds.play_sfx("whistle")
+        self._trigger_net_impulse(side, saved_vx, saved_vy)
 
     def _reset_positions(self):
         """Reset players and ball to kickoff positions after a goal."""
@@ -689,7 +701,9 @@ class GameplayScene(Scene):
         return background
 
     def _draw_field(self, surface):
-        """Draw simple field lines and goal hints over the background."""
+        """Draw field lines and goals (with animated nets) over the background."""
+        self._draw_goal_and_net(surface, 'left')
+        self._draw_goal_and_net(surface, 'right')
         pygame.draw.line(surface, WHITE, (0, GROUND_Y), (WIDTH, GROUND_Y), 4)
         pygame.draw.line(surface, GRAY, (WIDTH // 2, GROUND_Y), (WIDTH // 2, HEIGHT), 3)
 
@@ -704,6 +718,73 @@ class GameplayScene(Scene):
             pygame.draw.circle(image, WHITE, (BALL_RADIUS, BALL_RADIUS), BALL_RADIUS)
             pygame.draw.circle(image, BLACK, (BALL_RADIUS, BALL_RADIUS), BALL_RADIUS, 2)
             return image
+
+    def _get_goal_colors(self, stadium):
+        """Return (post_color, net_color) based on the stadium theme."""
+        if isinstance(stadium, dict):
+            post = stadium.get('goal_post_color')
+            net = stadium.get('goal_net_color')
+            if post and net:
+                return post, net
+        return (245, 245, 245), (200, 200, 200)
+
+    def _step_net_physics(self, dt):
+        """Advance spring-damper physics for both goal nets."""
+        for nodes in self._net_nodes.values():
+            for row in nodes:
+                for n in row:
+                    n[2] += -_NET_SPRING_K * n[0] * dt
+                    n[3] += -_NET_SPRING_K * n[1] * dt
+                    n[2] *= _NET_DAMPING
+                    n[3] *= _NET_DAMPING
+                    n[0] += n[2] * dt
+                    n[1] += n[3] * dt
+
+    def _trigger_net_impulse(self, side, vel_x, vel_y):
+        """Apply a velocity impulse to net nodes near the ball entry point."""
+        nodes = self._net_nodes[side]
+        x0 = 0 if side == 'left' else WIDTH - GOAL_WIDTH
+        y0 = GROUND_Y - GOAL_HEIGHT
+        bx, by = self.ball.rect.centerx, self.ball.rect.centery
+        for r in range(_NET_ROWS):
+            for c in range(_NET_COLS):
+                rx = x0 + c * GOAL_WIDTH / (_NET_COLS - 1)
+                ry = y0 + r * GOAL_HEIGHT / (_NET_ROWS - 1)
+                dist = ((bx - rx) ** 2 + (by - ry) ** 2) ** 0.5
+                influence = max(0.0, 1.0 - dist / 150.0)
+                nodes[r][c][2] += vel_x * influence * 0.6
+                nodes[r][c][3] += vel_y * influence * 0.6
+
+    def _draw_goal_and_net(self, surface, side):
+        """Draw goal posts, crossbar, and animated net for one side."""
+        x0 = 0 if side == 'left' else WIDTH - GOAL_WIDTH
+        x1 = GOAL_WIDTH if side == 'left' else WIDTH
+        y0 = GROUND_Y - GOAL_HEIGHT
+        y1 = GROUND_Y
+        nodes = self._net_nodes[side]
+        post_color = self._goal_post_color
+        net_color = self._goal_net_color
+
+        for r in range(_NET_ROWS):
+            for c in range(_NET_COLS):
+                n = nodes[r][c]
+                px = int(x0 + c * GOAL_WIDTH / (_NET_COLS - 1) + n[0])
+                py = int(y0 + r * GOAL_HEIGHT / (_NET_ROWS - 1) + n[1])
+                if c < _NET_COLS - 1:
+                    n2 = nodes[r][c + 1]
+                    px2 = int(x0 + (c + 1) * GOAL_WIDTH / (_NET_COLS - 1) + n2[0])
+                    py2 = int(y0 + r * GOAL_HEIGHT / (_NET_ROWS - 1) + n2[1])
+                    pygame.draw.line(surface, net_color, (px, py), (px2, py2), 1)
+                if r < _NET_ROWS - 1:
+                    n2 = nodes[r + 1][c]
+                    px2 = int(x0 + c * GOAL_WIDTH / (_NET_COLS - 1) + n2[0])
+                    py2 = int(y0 + (r + 1) * GOAL_HEIGHT / (_NET_ROWS - 1) + n2[1])
+                    pygame.draw.line(surface, net_color, (px, py), (px2, py2), 1)
+
+        front_x = x1 if side == 'left' else x0
+        pygame.draw.line(surface, post_color, (x0, y0), (x1, y0), 6)
+        pygame.draw.line(surface, post_color, (front_x, y0), (front_x, y1), 6)
+        pygame.draw.circle(surface, post_color, (front_x, y0), 4)
 
     def _get_gravity_mult(self, stadium):
         """Read the optional stadium gravity multiplier."""

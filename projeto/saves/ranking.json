@@ -1,5 +1,11 @@
 [
   {
+    "name": "Zida",
+    "score_p1": 12,
+    "score_p2": 3,
+    "diff": 9
+  },
+  {
     "name": "Rodrigo",
     "score_p1": 1,
     "score_p2": 8,
